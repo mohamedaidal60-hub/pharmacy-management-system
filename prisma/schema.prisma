@@ -1,0 +1,312 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  STAFF
+  RETAILER
+  WHOLESALE
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum PrescriptionStatus {
+  PENDING
+  READY
+  DISPENSED
+  CANCELLED
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String
+  name          String
+  role          UserRole  @default(STAFF)
+  storeId       String?
+  store         Store?    @relation(fields: [storeId], references: [id])
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  orders        Order[]
+  prescriptions Prescription[]
+  activities    Activity[]
+  
+  @@index([email])
+  @@index([storeId])
+}
+
+model Store {
+  id              String    @id @default(cuid())
+  name            String
+  address         String
+  phone           String
+  email           String?
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  users           User[]
+  products        StoreInventory[]
+  orders          Order[]
+  prescriptions   Prescription[]
+  transfers       StockTransfer[] @relation("FromStore")
+  receivedTransfers StockTransfer[] @relation("ToStore")
+  
+  @@index([isActive])
+}
+
+model Product {
+  id              String    @id @default(cuid())
+  name            String
+  description     String?
+  barcode         String?   @unique
+  sku             String    @unique
+  category        String
+  manufacturer    String?
+  requiresPrescription Boolean @default(false)
+  wholesalePrice  Float
+  retailPrice     Float
+  discountPercent Float     @default(0)
+  taxPercent      Float     @default(0)
+  expiryAlertDays Int       @default(90)
+  reorderLevel    Int       @default(10)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  inventory       StoreInventory[]
+  orderItems      OrderItem[]
+  prescriptionItems PrescriptionItem[]
+  
+  @@index([barcode])
+  @@index([sku])
+  @@index([category])
+}
+
+model StoreInventory {
+  id              String    @id @default(cuid())
+  storeId         String
+  productId       String
+  batchNumber     String?
+  quantity        Int       @default(0)
+  expiryDate      DateTime?
+  location        String?
+  lastCountDate   DateTime?
+  lastCountQty    Int?
+  store           Store     @relation(fields: [storeId], references: [id])
+  product         Product   @relation(fields: [productId], references: [id])
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@unique([storeId, productId, batchNumber])
+  @@index([storeId])
+  @@index([productId])
+  @@index([expiryDate])
+}
+
+model StockTransfer {
+  id              String    @id @default(cuid())
+  fromStoreId     String
+  toStoreId       String
+  productId       String
+  quantity        Int
+  status          String    @default("PENDING")
+  notes           String?
+  requestedBy     String?
+  approvedBy      String?
+  fromStore       Store     @relation("FromStore", fields: [fromStoreId], references: [id])
+  toStore         Store     @relation("ToStore", fields: [toStoreId], references: [id])
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([fromStoreId])
+  @@index([toStoreId])
+  @@index([status])
+}
+
+model Order {
+  id              String      @id @default(cuid())
+  orderNumber     String      @unique
+  storeId         String
+  customerId      String?
+  userId          String
+  type            String      // RETAIL, WHOLESALE
+  status          OrderStatus @default(PENDING)
+  subtotal        Float
+  tax             Float
+  discount        Float       @default(0)
+  total           Float
+  paymentMethod   String?
+  paymentStatus   String      @default("PENDING")
+  notes           String?
+  store           Store       @relation(fields: [storeId], references: [id])
+  user            User        @relation(fields: [userId], references: [id])
+  customer        Customer?   @relation(fields: [customerId], references: [id])
+  items           OrderItem[]
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  
+  @@index([orderNumber])
+  @@index([storeId])
+  @@index([customerId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id              String    @id @default(cuid())
+  orderId         String
+  productId       String
+  quantity        Int
+  unitPrice       Float
+  discount        Float     @default(0)
+  tax             Float     @default(0)
+  total           Float
+  order           Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product         Product   @relation(fields: [productId], references: [id])
+  createdAt       DateTime  @default(now())
+  
+  @@index([orderId])
+  @@index([productId])
+}
+
+model Customer {
+  id              String    @id @default(cuid())
+  name            String
+  email           String?
+  phone           String
+  address         String?
+  dateOfBirth     DateTime?
+  insuranceInfo   Json?
+  loyaltyPoints   Int       @default(0)
+  type            String    @default("RETAIL") // RETAIL, WHOLESALE
+  taxId           String?
+  discountPercent Float     @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  orders          Order[]
+  prescriptions   Prescription[]
+  
+  @@index([phone])
+  @@index([email])
+  @@index([type])
+}
+
+model Prescription {
+  id              String              @id @default(cuid())
+  prescriptionNumber String           @unique
+  customerId      String
+  doctorName      String
+  storeId         String
+  userId          String?
+  status          PrescriptionStatus  @default(PENDING)
+  notes           String?
+  customer        Customer            @relation(fields: [customerId], references: [id])
+  store           Store               @relation(fields: [storeId], references: [id])
+  user            User?               @relation(fields: [userId], references: [id])
+  items           PrescriptionItem[]
+  createdAt       DateTime            @default(now())
+  dispensedAt     DateTime?
+  updatedAt       DateTime            @updatedAt
+  
+  @@index([prescriptionNumber])
+  @@index([customerId])
+  @@index([storeId])
+  @@index([status])
+}
+
+model PrescriptionItem {
+  id              String        @id @default(cuid())
+  prescriptionId  String
+  productId       String
+  quantity        Int
+  dosage          String?
+  frequency       String?
+  duration        String?
+  notes           String?
+  prescription    Prescription  @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
+  product         Product       @relation(fields: [productId], references: [id])
+  createdAt       DateTime      @default(now())
+  
+  @@index([prescriptionId])
+  @@index([productId])
+}
+
+model MedicalInfo {
+  id              String    @id @default(cuid())
+  productId       String?
+  genericName     String
+  brandName       String?
+  category        String
+  indications     String?
+  dosage          String?
+  sideEffects     String?
+  contraindications String?
+  interactions    String?
+  precautions     String?
+  storageInfo     String?
+  manufacturerInfo String?
+  fdaWarnings     String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([genericName])
+  @@index([category])
+}
+
+model InsuranceClaim {
+  id              String    @id @default(cuid())
+  claimNumber     String    @unique
+  customerId      String
+  policyNumber    String
+  providerName    String
+  claimAmount     Float
+  approvedAmount  Float?
+  status          String    @default("PENDING")
+  submittedDate   DateTime  @default(now())
+  processedDate   DateTime?
+  notes           String?
+  documents       Json?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([claimNumber])
+  @@index([customerId])
+  @@index([status])
+}
+
+model Activity {
+  id              String    @id @default(cuid())
+  userId          String
+  action          String
+  entity          String?
+  entityId        String?
+  details         Json?
+  ipAddress       String?
+  user            User      @relation(fields: [userId], references: [id])
+  createdAt       DateTime  @default(now())
+  
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model Settings {
+  id              String    @id @default(cuid())
+  key             String    @unique
+  value           Json
+  description     String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([key])
+}
