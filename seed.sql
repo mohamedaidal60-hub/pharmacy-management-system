@@ -6,7 +6,7 @@ INSERT INTO "Store" ("id", "name", "address", "phone") VALUES
 -- CRÉATION DE L'ADMINISTRATEUR (Password: admin123)
 -- Hash bcrypt pour 'admin123'
 INSERT INTO "User" ("id", "email", "password", "name", "role", "storeId") VALUES 
-('admin_user', 'admin@pharma.com', '$2b$10$I61066.A1BfG3OByb0g5Kee/8E.1UHe0Xm5CnyrG8f6pS9e9z4Vlq', 'Anis Admin', 'ADMIN', 'store_main');
+('admin_user', 'admin@pharma.com', '$2b$10$M4gQT4d79pxDMQC9X4fJh.CL7UhN9Z8ebvE5nLz32AfY8/pzuAYBu', 'Anis Admin', 'ADMIN', 'store_main');
 
 -- CRÉATION DES PRODUITS INITIAUX
 INSERT INTO "Product" ("id", "name", "molecule", "category", "price", "wholesalePrice", "barcode", "rxRequired", "storeId") VALUES 

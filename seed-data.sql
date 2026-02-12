@@ -11,7 +11,7 @@ INSERT INTO "Store" ("id", "name", "address", "phone") VALUES
 -- Mot de passe: admin123
 -- Hash bcrypt de "admin123"
 INSERT INTO "User" ("id", "name", "email", "password", "role", "isActive", "canCreateUsers", "storeId", "createdById") VALUES
-('admin_master', 'Administrateur Principal', 'amperella@gmail.com', '$2a$10$yJ0oHZQKl5N5qN5qN5qN5.eN5qN5qN5qN5qN5qN5qN5qN5qN5qN5q', 'ADMIN', true, true, 'store_001', NULL);
+('admin_master', 'Administrateur Principal', 'amperella@gmail.com', '$2b$10$M4gQT4d79pxDMQC9X4fJh.CL7UhN9Z8ebvE5nLz32AfY8/pzuAYBu', 'ADMIN', true, true, 'store_001', NULL);
 
 -- 3. Catégories de produits (via l'insertion de produits)
 -- Catégories: Analgésique, AINS, Antibiotique, Cardiologie, Diabète, ORL, Dermatologie
