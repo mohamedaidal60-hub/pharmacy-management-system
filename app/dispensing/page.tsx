@@ -13,7 +13,8 @@ import {
     FileText,
     Clock,
     ArrowRight,
-    Loader2
+    Loader2,
+    X
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createOrder, getStoreProducts } from "@/app/actions/pharmacy";
@@ -47,11 +48,7 @@ export default function DispensingPage() {
         });
 
         if (res.success) {
-            alert("Ordonnance validée et délivrée ! (Impression étiquette lancée)");
-            setStep(1);
-            setPatientName("");
-            setMedicationSearch("");
-            setSelectedProduct(null);
+            setStep(4); // Afficher l'étiquette
         } else {
             alert("Erreur: " + res.error);
         }
@@ -218,24 +215,78 @@ export default function DispensingPage() {
                                     </button>
                                 </div>
                             )}
+
+                            {step === 4 && selectedProduct && (
+                                <div className="space-y-10 animate-in fade-in zoom-in-95 duration-500">
+                                    <div className="bg-white rounded-[3rem] p-10 shadow-xl border-2 border-dashed border-slate-200 relative overflow-hidden">
+                                        <div className="absolute top-0 left-0 w-full h-2 bg-rose-500" />
+                                        <div className="text-center mb-8">
+                                            <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center text-rose-500 mx-auto mb-4">
+                                                <FileText className="w-8 h-8" />
+                                            </div>
+                                            <h3 className="text-2xl font-black text-slate-900 uppercase">Etiquette <span className="text-rose-500">Valide.</span></h3>
+                                        </div>
+
+                                        <div className="space-y-4">
+                                            <div className="flex justify-between border-b border-slate-100 pb-4">
+                                                <span className="text-[10px] font-black text-slate-400 uppercase">Patient</span>
+                                                <span className="text-xs font-black text-slate-900 uppercase">{patientName}</span>
+                                            </div>
+                                            <div className="flex justify-between border-b border-slate-100 pb-4">
+                                                <span className="text-[10px] font-black text-slate-400 uppercase">Produit</span>
+                                                <span className="text-xs font-black text-rose-600 uppercase">{selectedProduct.name}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center pt-2">
+                                                <div className="flex-grow h-10 bg-slate-900 rounded-lg flex items-center justify-center gap-1 px-4">
+                                                    {Array.from({ length: 30 }).map((_, i) => (
+                                                        <div key={i} className="h-6 bg-white" style={{ width: Math.random() * 3 + 1 + 'px' }} />
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex gap-4">
+                                        <button
+                                            onClick={() => {
+                                                setStep(1);
+                                                setPatientName("");
+                                                setMedicationSearch("");
+                                                setSelectedProduct(null);
+                                            }}
+                                            className="flex-grow bg-slate-100 py-6 rounded-[2rem] font-black uppercase text-[10px] tracking-widest"
+                                        >
+                                            Nouvelle Vente
+                                        </button>
+                                        <button
+                                            onClick={() => alert("Impression thermique en cours...")}
+                                            className="flex-grow bg-rose-600 text-white py-6 rounded-[2rem] font-black uppercase text-[10px] tracking-widest shadow-xl"
+                                        >
+                                            Réimprimer
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
 
                 <div className="space-y-10">
                     <div className="bg-slate-950 text-white rounded-[4rem] p-10 shadow-2xl relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500/20 rounded-full blur-3xl" />
                         <h3 className="text-xl font-black uppercase tracking-tight text-white mb-12 flex items-center gap-4">
                             <Clock className="text-rose-500" /> File d'attente
                         </h3>
                         <div className="space-y-6">
-                            <div className="flex items-center justify-between p-6 bg-white/5 rounded-3xl border border-white/5 group">
+                            <div className="flex items-center justify-between p-6 bg-white/5 rounded-3xl border border-white/5 group hover:bg-white/10 transition-all cursor-pointer">
                                 <div className="flex items-center gap-4">
                                     <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center text-[10px] font-black">#1</div>
                                     <div>
                                         <p className="text-xs font-black uppercase text-white leading-none">Mme. Lefebvre</p>
-                                        <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-1.5">Renouvellement Automatique</p>
+                                        <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-1.5">Renouvellement</p>
                                     </div>
                                 </div>
+                                <ChevronRight className="w-4 h-4 text-slate-700 group-hover:text-rose-500 transition-colors" />
                             </div>
                         </div>
                     </div>
