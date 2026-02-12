@@ -1,175 +1,155 @@
 "use client";
 
-import { useState } from "react";
 import {
     Settings,
     User,
-    Shield,
     Store,
-    Globe,
+    Shield,
     Bell,
-    ChevronRight,
+    Globe,
     CreditCard,
-    Zap,
-    Save,
-    Lock,
     Database,
-    Printer
+    Lock,
+    ChevronRight,
+    Save,
+    Trash2,
+    ExternalLink,
+    ShieldCheck,
+    Zap
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const sections = [
-    { id: "general", name: "Général", icon: Settings },
-    { id: "users", name: "Utilisateurs & Droits", icon: Shield },
-    { id: "stores", name: "Gestion des Magasins", icon: Store },
-    { id: "pricing", name: "Tarification & Marges", icon: Zap },
-    { id: "notifications", name: "Notifications", icon: Bell },
-    { id: "billing", name: "Facturation", icon: CreditCard },
-];
-
 export default function SettingsPage() {
-    const [activeTab, setActiveTab] = useState("general");
-
     return (
-        <div className="space-y-12">
-            <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="max-w-[1600px] mx-auto space-y-12 pb-20 px-4 sm:px-0">
+            <header className="flex flex-col md:flex-row md:items-end justify-between gap-8">
                 <div>
-                    <h1 className="text-4xl font-black text-slate-900 tracking-tight uppercase">Paramètres <span className="text-blue-600 italic">Système.</span></h1>
-                    <p className="text-slate-500 mt-2 font-medium tracking-wide">Configuration globale de l'application, sécurité et personnalisation.</p>
+                    <div className="flex items-center gap-2 mb-2">
+                        <span className="w-8 h-1 bg-slate-900 rounded-full"></span>
+                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-900">System Configuration</span>
+                    </div>
+                    <h1 className="text-5xl font-black text-slate-900 tracking-tighter uppercase leading-none">Centre de <span className="text-slate-500 italic">Contrôle.</span></h1>
                 </div>
-                <button className="bg-blue-600 text-white px-10 py-4 rounded-2xl font-black uppercase tracking-widest text-xs flex items-center gap-4 shadow-xl hover:bg-slate-900 transition-all">
-                    <Save className="w-5 h-5" /> Enregistrer les changements
+                <button className="bg-blue-600 text-white px-10 py-5 rounded-[2rem] font-black uppercase tracking-widest text-[10px] shadow-2xl shadow-blue-200 hover:bg-slate-900 transition-all flex items-center gap-4">
+                    <Save className="w-5 h-5" /> Enregistrer les modifications
                 </button>
             </header>
 
-            <div className="flex gap-12">
-                {/* Navigation Sidebar */}
-                <div className="w-80 space-y-2">
-                    {sections.map((section) => (
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-12">
+                {/* Navigation latérale des réglages */}
+                <div className="space-y-4">
+                    {[
+                        { name: "Profil & Utilisateur", icon: User, active: true },
+                        { name: "Établissement", icon: Store, active: false },
+                        { name: "Sécurité & Accès", icon: Lock, active: false },
+                        { name: "Boutique & Vente", icon: Zap, active: false },
+                        { name: "Facturation & Plans", icon: CreditCard, active: false },
+                        { name: "Notifications", icon: Bell, active: false },
+                        { name: "Système & API", icon: Database, active: false }
+                    ].map((item) => (
                         <button
-                            key={section.id}
-                            onClick={() => setActiveTab(section.id)}
+                            key={item.name}
                             className={cn(
-                                "w-full flex items-center justify-between p-6 rounded-[2rem] transition-all group",
-                                activeTab === section.id ? "bg-white shadow-sm border border-slate-100" : "hover:bg-slate-100"
+                                "w-full flex items-center justify-between p-6 rounded-3xl transition-all duration-300 group font-black uppercase tracking-widest text-[10px]",
+                                item.active ? "bg-white shadow-xl shadow-slate-100 text-blue-600 border border-slate-100" : "text-slate-400 hover:bg-white hover:text-slate-900"
                             )}
                         >
-                            <div className="flex items-center gap-5">
-                                <div className={cn(
-                                    "w-12 h-12 rounded-2xl flex items-center justify-center transition-all",
-                                    activeTab === section.id ? "bg-blue-600 text-white shadow-lg shadow-blue-100" : "bg-slate-50 text-slate-400 group-hover:text-blue-600"
-                                )}>
-                                    <section.icon className="w-6 h-6" />
-                                </div>
-                                <span className={cn(
-                                    "text-xs font-black uppercase tracking-widest",
-                                    activeTab === section.id ? "text-slate-900" : "text-slate-400 group-hover:text-slate-600"
-                                )}>{section.name}</span>
+                            <div className="flex items-center gap-4">
+                                <item.icon className={cn("w-5 h-5", item.active ? "text-blue-600" : "text-slate-300 group-hover:text-blue-600")} />
+                                {item.name}
                             </div>
-                            <ChevronRight className={cn(
-                                "w-4 h-4 transition-all",
-                                activeTab === section.id ? "text-blue-600 translate-x-1" : "text-slate-300"
-                            )} />
+                            <ChevronRight className={cn("w-4 h-4", item.active ? "opacity-100" : "opacity-0 group-hover:opacity-100")} />
                         </button>
                     ))}
                 </div>
 
-                {/* Form Content */}
-                <div className="flex-grow space-y-10">
-                    <div className="bg-white rounded-[3.5rem] p-12 shadow-sm border border-slate-100">
-                        {activeTab === "general" && (
-                            <div className="space-y-10">
-                                <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Informations de l'Organisation</h2>
-                                <div className="grid grid-cols-2 gap-8">
-                                    <div className="space-y-3">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Nom de la Pharmacie</label>
-                                        <input
-                                            type="text"
-                                            defaultValue="Dukanileo Pharma Group"
-                                            className="w-full bg-slate-50 border-none rounded-2xl py-4 px-6 text-sm font-semibold focus:ring-2 focus:ring-blue-600 transition-all outline-none"
-                                        />
-                                    </div>
-                                    <div className="space-y-3">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Numéro d'agrément</label>
-                                        <input
-                                            type="text"
-                                            defaultValue="PH-992-KLA-110"
-                                            className="w-full bg-slate-50 border-none rounded-2xl py-4 px-6 text-sm font-semibold focus:ring-2 focus:ring-blue-600 transition-all outline-none"
-                                        />
-                                    </div>
-                                    <div className="space-y-3">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Langue par défaut</label>
-                                        <select className="w-full bg-slate-50 border-none rounded-2xl py-4 px-6 text-sm font-semibold focus:ring-2 focus:ring-blue-600 transition-all outline-none appearance-none">
-                                            <option>Français (France)</option>
-                                            <option>English (UK)</option>
-                                            <option>Swahili</option>
-                                        </select>
-                                    </div>
-                                    <div className="space-y-3">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Devise de transaction</label>
-                                        <select className="w-full bg-slate-50 border-none rounded-2xl py-4 px-6 text-sm font-semibold focus:ring-2 focus:ring-blue-600 transition-all outline-none appearance-none">
-                                            <option>Euros (€)</option>
-                                            <option>Dollars US ($)</option>
-                                            <option>Francs CFA (XOF)</option>
-                                        </select>
-                                    </div>
+                {/* Panneau de contenu principal */}
+                <div className="lg:col-span-3 space-y-12">
+                    {/* Section Profil */}
+                    <section className="bg-white rounded-[4rem] p-12 shadow-sm border border-slate-100 relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-slate-50 rounded-full blur-3xl opacity-50 -translate-y-1/2 translate-x-1/2" />
+                        <div className="flex items-center gap-10 mb-16 px-4">
+                            <div className="relative group cursor-pointer">
+                                <div className="w-32 h-32 rounded-[3.5rem] bg-slate-950 flex items-center justify-center text-white p-1 text-5xl font-black shadow-2xl overflow-hidden group-hover:scale-105 transition-all duration-500">
+                                    <div className="w-full h-full rounded-[3rem] border-2 border-white/20 flex items-center justify-center">A</div>
                                 </div>
-
-                                <div className="pt-10 border-t border-slate-50">
-                                    <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight mb-8">Base de Données & Sauvegarde</h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div className="p-8 bg-slate-50 rounded-[2.5rem] border border-slate-100 flex items-center justify-between group cursor-pointer hover:bg-slate-100 transition-all">
-                                            <div className="flex items-center gap-6">
-                                                <div className="bg-white p-4 rounded-2xl shadow-sm text-blue-600"><Database className="w-6 h-6" /></div>
-                                                <div>
-                                                    <p className="font-black text-slate-900 uppercase text-xs tracking-wider">Sauvegarde Manuelle</p>
-                                                    <p className="text-[10px] text-slate-500 font-bold uppercase mt-1">Dernière: Aujourd'hui, 04:22</p>
-                                                </div>
-                                            </div>
-                                            <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
-                                        </div>
-                                        <div className="p-8 bg-slate-50 rounded-[2.5rem] border border-slate-100 flex items-center justify-between group cursor-pointer hover:bg-slate-100 transition-all">
-                                            <div className="flex items-center gap-6">
-                                                <div className="bg-white p-4 rounded-2xl shadow-sm text-blue-600"><Printer className="w-6 h-6" /></div>
-                                                <div>
-                                                    <p className="font-black text-slate-900 uppercase text-xs tracking-wider">Configuration Imprimantes</p>
-                                                    <p className="text-[10px] text-slate-500 font-bold uppercase mt-1">3 Imprimantes connectées</p>
-                                                </div>
-                                            </div>
-                                            <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
-                                        </div>
-                                    </div>
+                                <div className="absolute -bottom-2 -right-2 bg-blue-600 text-white p-4 rounded-2xl shadow-xl border-4 border-white opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Settings className="w-5 h-5" />
                                 </div>
                             </div>
-                        )}
-                        {activeTab !== "general" && (
-                            <div className="text-center py-20">
-                                <div className="bg-slate-50 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-8 border border-slate-100">
-                                    <Lock className="w-10 h-10 text-slate-200" />
-                                </div>
-                                <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Section en cours d'optimisation</h2>
-                                <p className="text-slate-400 mt-4 font-bold uppercase text-[10px] tracking-widest leading-relaxed max-w-sm mx-auto">
-                                    Cette interface de configuration est gérée de manière dynamique. <br />Veuillez contacter le support pour des modifications avancées.
-                                </p>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Security Alert Block */}
-                    <div className="bg-slate-900 rounded-[3.5rem] p-12 text-white shadow-2xl relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2" />
-                        <div className="relative z-10 flex items-center justify-between">
-                            <div className="flex items-center gap-8">
-                                <div className="bg-white/10 p-5 rounded-3xl border border-white/10 backdrop-blur">
-                                    <Shield className="w-8 h-8 text-blue-400" />
-                                </div>
-                                <div>
-                                    <h4 className="text-2xl font-black uppercase tracking-tight">Connexion via <span className="text-blue-400 italic">AuthOS.</span></h4>
-                                    <p className="text-slate-400 mt-2 font-medium">Authentification sécurisée par rôles active pour tous les terminaux.</p>
+                            <div>
+                                <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tight">Anis Merah</h2>
+                                <p className="text-[11px] font-black text-blue-600 uppercase tracking-[0.4em] mt-2">Administrateur Principal</p>
+                                <div className="flex gap-3 mt-6">
+                                    <span className="bg-emerald-50 text-emerald-600 px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border border-emerald-100">Compte Vérifié</span>
                                 </div>
                             </div>
-                            <button className="bg-white text-slate-900 px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-blue-400 transition-all shadow-xl">Auditer les accès</button>
                         </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-10 px-4">
+                            <div className="space-y-4">
+                                <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-2">Email Professionnel</label>
+                                <input type="email" defaultValue="anis.merah@pharmaos.fr" className="w-full bg-slate-50 border-none rounded-2xl py-5 px-8 text-sm font-bold text-slate-900 focus:bg-white focus:ring-4 focus:ring-blue-600/5 transition-all outline-none" />
+                            </div>
+                            <div className="space-y-4">
+                                <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-2">Numéro de Téléphone</label>
+                                <input type="tel" defaultValue="+33 6 88 45 12 33" className="w-full bg-slate-50 border-none rounded-2xl py-5 px-8 text-sm font-bold text-slate-900 focus:bg-white focus:ring-4 focus:ring-blue-600/5 transition-all outline-none" />
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Section Sécurité Critiques */}
+                    <section className="bg-slate-950 rounded-[4rem] p-12 shadow-2xl relative overflow-hidden border border-white/5">
+                        <div className="absolute top-0 right-0 w-1/3 h-full bg-blue-600/5 -skew-x-12 translate-x-1/2" />
+                        <div className="relative z-10">
+                            <h2 className="text-2xl font-black text-white uppercase tracking-tight flex items-center gap-4 mb-12">
+                                <ShieldCheck className="text-blue-500 w-7 h-7" /> Sécurité du Noyau
+                            </h2>
+
+                            <div className="space-y-6">
+                                <div className="flex items-center justify-between p-10 bg-white/5 rounded-[3rem] border border-white/10 group hover:bg-white/10 transition-all">
+                                    <div className="flex items-center gap-8">
+                                        <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center text-blue-400 group-hover:scale-110 transition-transform">
+                                            <Lock className="w-7 h-7" />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-lg font-black text-white uppercase tracking-tight leading-none">Double Authentification (2FA)</h4>
+                                            <p className="text-xs text-slate-500 font-bold mt-2 uppercase tracking-widest italic flex items-center gap-2">
+                                                <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" /> Recommandé pour Admin
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-6">
+                                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Désactivé</span>
+                                        <button className="w-16 h-8 bg-slate-800 rounded-full relative p-1 group-hover:bg-slate-700 transition-all">
+                                            <div className="w-6 h-6 bg-slate-600 rounded-full" />
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center justify-between p-10 bg-white/5 rounded-[3rem] border border-white/10 group hover:border-blue-500/50 transition-all">
+                                    <div className="flex items-center gap-8">
+                                        <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center text-emerald-400">
+                                            <Shield className="w-7 h-7" />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-lg font-black text-white uppercase tracking-tight leading-none">Audit des Accès</h4>
+                                            <p className="text-xs text-slate-500 font-medium mt-2 leading-relaxed italic">Consulter l'historique de chaque connexion et action critique.</p>
+                                        </div>
+                                    </div>
+                                    <button className="bg-white/5 hover:bg-white/10 text-white font-black text-[10px] uppercase tracking-widest px-8 py-4 rounded-xl transition-all">Ouvrir le Log</button>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Zone de Danger */}
+                    <div className="px-10 flex items-center justify-between opacity-50 hover:opacity-100 transition-opacity">
+                        <div className="flex items-center gap-4 text-rose-500">
+                            <Trash2 className="w-5 h-5" />
+                            <span className="text-[10px] font-black uppercase tracking-widest">Archiver ce compte utilisateur</span>
+                        </div>
+                        <button className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2 hover:text-slate-900">Support Technique <ExternalLink className="w-3 h-3" /></button>
                     </div>
                 </div>
             </div>

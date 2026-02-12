@@ -2,216 +2,156 @@
 
 import { useState } from "react";
 import {
-    Stethoscope,
     Search,
-    Info,
+    Stethoscope,
     AlertCircle,
-    Calculator,
-    MessageSquare,
-    BookOpen,
     ShieldAlert,
-    ArrowRight,
-    Heart,
-    Droplets,
+    CheckCircle2,
+    BookOpen,
+    Info,
+    Mic,
+    History,
+    Activity,
     Zap,
-    CheckCircle2
+    ChevronRight,
+    Database,
+    ArrowRight
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const medicationDb = [
-    {
-        name: "Amoxicilline",
-        class: "Antibiotique",
-        indications: "Infections bactériennes des oreilles, du nez, de la gorge, des voies urinaires et de la peau.",
-        dosage: "Généralement 250mg à 500mg toutes les 8 heures.",
-        sideEffects: "Nausées, vomissements, diarrhée, éruptions cutanées.",
-        safety: "Alerte Allergie Penicilline"
-    },
-    {
-        name: "Lisinopril",
-        class: "Inhibiteur de l'ECA",
-        indications: "Hypertension artérielle, insuffisance cardiaque, après une crise cardiaque.",
-        dosage: "5mg à 40mg une fois par jour.",
-        sideEffects: "Toux sèche, étourdissements, maux de tête.",
-        safety: "Surveillance Fonction Rénale"
-    },
-    {
-        name: "Metformine",
-        class: "Antidiabétique",
-        indications: "Diabète de type 2.",
-        dosage: "500mg à 2550mg par jour en doses divisées.",
-        sideEffects: "Troubles gastro-intestinaux, goût métallique.",
-        safety: "Risque d'Acidose Lactique"
-    }
+const drugDatabase = [
+    { id: "1", name: "Ibuprofène", category: "AINS", interactions: ["Anticoagulants", "Aspirine"], risk: "Modéré", usage: "Analgésique, Anti-inflammatoire" },
+    { id: "2", name: "Paracétamol", category: "Analgésique", interactions: ["Alcool (chronique)"], risk: "Faible", usage: "Douleur, Fièvre" },
+    { id: "3", name: "Warfarine", category: "Anticoagulant", interactions: ["Aspirine", "Ibuprofène", "Légumes verts (K1)"], risk: "Élevé", usage: "Fluidification sanguine" },
 ];
 
 export default function MedicalAdvice() {
-    const [activeTab, setActiveTab] = useState("database");
-    const [searchTerm, setSearchTerm] = useState("");
-
-    const filteredMeds = medicationDb.filter(m => m.name.toLowerCase().includes(searchTerm.toLowerCase()));
+    const [query, setQuery] = useState("");
 
     return (
-        <div className="space-y-12">
-            <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="max-w-[1600px] mx-auto space-y-12 pb-20 px-4 sm:px-0">
+            <header className="flex flex-col md:flex-row md:items-end justify-between gap-8">
                 <div>
-                    <h1 className="text-4xl font-black text-slate-900 tracking-tight uppercase">Conseils <span className="text-blue-600 italic">Médicaux.</span></h1>
-                    <p className="text-slate-500 mt-2 font-medium tracking-wide">Base de connaissances, vérificateur d'interactions et assistance patient.</p>
+                    <div className="flex items-center gap-2 mb-2">
+                        <span className="w-8 h-1 bg-rose-500 rounded-full"></span>
+                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-rose-500">Clinical Decision Support</span>
+                    </div>
+                    <h1 className="text-5xl font-black text-slate-900 tracking-tighter uppercase leading-none">Conseils <span className="text-rose-500 italic">Médicaux.</span></h1>
+                    <p className="text-slate-500 mt-4 font-medium text-lg">Base de connaissances pharmaceutique et vérificateur d'interactions.</p>
                 </div>
-                <div className="flex gap-4">
-                    <button className="bg-slate-900 text-white px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-xs flex items-center gap-3 shadow-xl hover:bg-slate-800 transition-all">
-                        <Calculator className="w-4 h-4" /> Calculateur de Dosage
-                    </button>
-                </div>
+                <button className="bg-slate-900 text-white px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-xl hover:bg-rose-500 transition-all flex items-center gap-3">
+                    <Database className="w-5 h-5" /> Base Molécules
+                </button>
             </header>
 
-            {/* Tabs */}
-            <div className="flex bg-slate-100 p-2 rounded-3xl w-fit">
-                {[
-                    { id: "database", name: "Base de Données", icon: BookOpen },
-                    { id: "interactions", name: "Interactions", icon: ShieldAlert },
-                    { id: "education", name: "Éducation Patient", icon: Info },
-                    { id: "ask", name: "Demander au Pharmacien", icon: MessageSquare },
-                ].map((tab) => (
-                    <button
-                        key={tab.id}
-                        onClick={() => setActiveTab(tab.id)}
-                        className={cn(
-                            "px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2",
-                            activeTab === tab.id ? "bg-white text-blue-600 shadow-sm" : "text-slate-400 hover:text-slate-600"
-                        )}
-                    >
-                        <tab.icon className="w-4 h-4" />
-                        {tab.name}
-                    </button>
-                ))}
-            </div>
-
+            {/* Main Analysis Section */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-                {/* Left Column: Search & List */}
-                <div className="lg:col-span-2 space-y-8">
-                    <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100">
-                        <div className="relative">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+                <div className="lg:col-span-2 space-y-10">
+                    {/* AI Search Bar */}
+                    <div className="bg-white p-10 rounded-[4rem] shadow-sm border border-slate-100">
+                        <div className="relative group">
+                            <Search className="absolute left-8 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-rose-500 transition-colors w-6 h-6" />
                             <input
                                 type="text"
-                                placeholder="Rechercher une molécule ou un nom de marque..."
-                                className="w-full bg-slate-50 border-none rounded-2xl py-4 pl-12 pr-4 text-sm font-semibold focus:bg-white focus:ring-2 focus:ring-blue-600 transition-all outline-none"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
+                                placeholder="Scanner une ordonnance ou saisir une molécule..."
+                                className="w-full bg-slate-50 border-none rounded-[2.5rem] py-10 pl-24 pr-16 text-2xl font-black text-slate-900 focus:bg-white focus:ring-4 focus:ring-rose-500/5 transition-all outline-none"
+                                value={query}
+                                onChange={(e) => setQuery(e.target.value)}
                             />
+                            <button className="absolute right-8 top-1/2 -translate-y-1/2 bg-white p-4 rounded-2xl text-slate-400 hover:text-rose-500 transition-all border border-slate-100 shadow-sm"><Mic /></button>
+                        </div>
+                        <div className="flex flex-wrap gap-4 mt-8 px-4">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 w-full mb-2">Recherches fréquentes :</p>
+                            {["Amoxicilline", "Ciprofloxacine", "Vitamine D3", "Metformine"].map(tag => (
+                                <button key={tag} className="px-5 py-2 bg-slate-50 border border-slate-100 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-500 hover:bg-rose-50 hover:text-rose-500 transition-all">{tag}</button>
+                            ))}
                         </div>
                     </div>
 
+                    {/* Results Area */}
                     <div className="space-y-6">
-                        {filteredMeds.map((med) => (
-                            <div key={med.name} className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-100 group hover:border-blue-200 transition-all duration-500">
-                                <div className="flex items-start justify-between mb-8">
-                                    <div>
-                                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-600 bg-blue-50 px-4 py-1.5 rounded-full">{med.class}</span>
-                                        <h3 className="text-2xl font-black text-slate-900 mt-4 uppercase tracking-tight">{med.name}</h3>
+                        <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight flex items-center gap-4 px-4">
+                            <Zap className="text-rose-500 w-6 h-6" /> Résultats d'Analyse
+                        </h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            {drugDatabase.map(drug => (
+                                <div key={drug.id} className="bg-white p-10 rounded-[3.5rem] border border-slate-100 group hover:shadow-2xl transition-all duration-500">
+                                    <div className="flex justify-between items-start mb-10">
+                                        <div className="w-16 h-16 bg-slate-50 rounded-[1.5rem] flex items-center justify-center text-rose-500 group-hover:bg-rose-500 group-hover:text-white transition-all duration-500">
+                                            <BookOpen className="w-7 h-7" />
+                                        </div>
+                                        <span className={cn(
+                                            "text-[9px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest border",
+                                            drug.risk === "Élevé" ? "bg-rose-50 text-rose-500 border-rose-100" : "bg-emerald-50 text-emerald-500 border-emerald-100"
+                                        )}>
+                                            Risque {drug.risk}
+                                        </span>
                                     </div>
-                                    <div className="bg-red-50 text-red-600 p-4 rounded-2xl flex flex-col items-center">
-                                        <ShieldAlert className="w-6 h-6" />
-                                        <span className="text-[8px] font-black uppercase mt-1">Sécurité</span>
-                                    </div>
-                                </div>
+                                    <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight leading-none">{drug.name}</h3>
+                                    <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest mt-2">{drug.category}</p>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    <div className="space-y-2">
-                                        <h4 className="text-[10px] font-black uppercase text-slate-900 tracking-widest flex items-center gap-2">
-                                            <Droplets className="w-3 h-3 text-blue-500" /> Indications
-                                        </h4>
-                                        <p className="text-sm font-medium text-slate-500 leading-relaxed">{med.indications}</p>
+                                    <div className="mt-8 space-y-4">
+                                        <div className="p-4 bg-slate-50 rounded-2xl flex items-center gap-4">
+                                            <Info className="w-4 h-4 text-slate-400" />
+                                            <p className="text-xs font-bold text-slate-600 leading-normal">{drug.usage}</p>
+                                        </div>
+                                        {drug.risk === "Élevé" && (
+                                            <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-4">
+                                                <ShieldAlert className="w-5 h-5 text-rose-500" />
+                                                <p className="text-[10px] font-black text-rose-600 uppercase tracking-widest leading-normal">Interactions critiques identifiées</p>
+                                            </div>
+                                        )}
                                     </div>
-                                    <div className="space-y-2">
-                                        <h4 className="text-[10px] font-black uppercase text-slate-900 tracking-widest flex items-center gap-2">
-                                            <Zap className="w-3 h-3 text-blue-500" /> Dosage standard
-                                        </h4>
-                                        <p className="text-sm font-medium text-slate-500 leading-relaxed">{med.dosage}</p>
-                                    </div>
-                                </div>
 
-                                <div className="mt-8 pt-8 border-t border-slate-50 flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <AlertCircle className="text-amber-500 w-5 h-5" />
-                                        <p className="text-xs font-bold text-slate-600 italic">Attention: {med.safety}</p>
-                                    </div>
-                                    <button className="text-[10px] font-black bg-slate-900 text-white px-6 py-3 rounded-xl uppercase tracking-widest flex items-center gap-2 hover:bg-blue-600 transition-all">
-                                        Fiche Complète <ArrowRight className="w-4 h-4" />
+                                    <button className="w-full mt-10 bg-slate-900 text-white py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-4">
+                                        Consulter Dossier Complet <ChevronRight className="w-4 h-4" />
                                     </button>
                                 </div>
-                            </div>
-                        ))}
+                            ))}
+                        </div>
                     </div>
                 </div>
 
-                {/* Right Column: Interaction Checker & Safety Alerts */}
-                <div className="space-y-8">
-                    <div className="bg-slate-900 text-white rounded-[3rem] p-10 shadow-xl shadow-slate-200">
-                        <h2 className="text-xl font-black uppercase tracking-tight flex items-center gap-3 mb-10 text-blue-400">
-                            <ShieldAlert /> Interaction Checker
-                        </h2>
-                        <div className="space-y-6">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 leading-relaxed">Ajoutez des médicaments pour vérifier les interactions potentielles.</p>
-                            <div className="space-y-4">
-                                <div className="bg-white/5 p-4 rounded-2xl border border-white/10 flex items-center justify-between">
-                                    <span className="text-sm font-bold">Amoxicilline</span>
-                                    <X className="w-4 h-4 text-slate-500 cursor-pointer" />
+                {/* Global Safety Sidebar */}
+                <div className="space-y-10">
+                    <div className="bg-slate-950 text-white rounded-[4rem] p-12 shadow-2xl relative overflow-hidden h-fit">
+                        <div className="absolute top-0 right-0 w-40 h-40 bg-rose-600 rounded-full blur-[100px] opacity-10" />
+                        <h3 className="text-xl font-black uppercase tracking-tight flex items-center gap-4 text-rose-500 mb-12">
+                            <ShieldAlert className="w-7 h-7" /> Alerte FDA / ANSM
+                        </h3>
+                        <div className="space-y-8">
+                            <div className="bg-white/5 border border-white/10 p-10 rounded-[3rem] space-y-6">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-3 h-3 bg-rose-500 rounded-full shadow-[0_0_10px_rgba(244,63,94,0.5)]" />
+                                    <p className="text-[11px] font-black uppercase tracking-widest">Rappel de Lot Urgent</p>
                                 </div>
-                                <div className="bg-white/5 p-4 rounded-2xl border border-white/10 flex items-center justify-between">
-                                    <span className="text-sm font-bold">Lisinopril</span>
-                                    <X className="w-4 h-4 text-slate-500 cursor-pointer" />
-                                </div>
+                                <h4 className="text-xl font-black text-white uppercase tracking-tight font-sans leading-none">Metformine - Lot X82</h4>
+                                <p className="text-xs text-slate-500 font-medium leading-relaxed italic">Contamination potentielle identifiée. Ne pas délivrer et isoler le stock immédiatement.</p>
+                                <button className="w-full bg-rose-600 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest">Voir Détails Rappel</button>
                             </div>
-                            <div className="bg-emerald-500/10 border border-emerald-500/20 p-6 rounded-[2rem] flex items-center gap-4">
-                                <CheckCircle2 className="text-emerald-400 w-8 h-8 flex-shrink-0" />
-                                <p className="text-[10px] font-black uppercase text-emerald-400 tracking-widest">Aucune interaction majeure détectée entre ces médicaments.</p>
+
+                            <div className="bg-white/5 border border-white/10 p-10 rounded-[3rem] opacity-50 hover:opacity-100 transition-all">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Mise à jour Protocoles</p>
+                                <p className="text-sm font-bold text-white uppercase tracking-tight">Nouvelles directives Diabète Type II</p>
+                                <div className="mt-6 flex items-center justify-between">
+                                    <span className="text-[9px] font-black uppercase text-indigo-400">PDF Disponible</span>
+                                    <History className="w-4 h-4" />
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <div className="bg-white rounded-[3rem] p-10 shadow-sm border border-slate-100">
-                        <h2 className="text-xl font-black uppercase tracking-tight flex items-center gap-3 mb-8 text-red-600">
-                            <AlertCircle /> Alertes FDA
-                        </h2>
-                        <div className="space-y-8">
-                            <div className="group cursor-pointer">
-                                <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">12 Février 2024</p>
-                                <p className="text-sm font-black text-slate-900 mt-2 group-hover:text-blue-600 transition-colors uppercase leading-tight tracking-tighter">Rappel de lot: Ranitidine 150mg (Lots 2023-XX)</p>
-                            </div>
-                            <div className="group cursor-pointer">
-                                <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">08 Février 2024</p>
-                                <p className="text-sm font-black text-slate-900 mt-2 group-hover:text-blue-600 transition-colors uppercase leading-tight tracking-tighter">Nouvel avertissement: Risques hépatiques pour certains traitements de l'acné.</p>
-                            </div>
-                        </div>
-                        <button className="w-full mt-10 bg-slate-50 hover:bg-slate-100 text-slate-600 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all">
-                            Toutes les Alertes de Sécurité
+                    <div className="bg-white rounded-[3.5rem] p-10 border border-slate-100 shadow-sm group">
+                        <h3 className="text-lg font-black uppercase tracking-tight text-slate-900 mb-8 flex items-center gap-4">
+                            <Stethoscope className="text-rose-500" /> Télémédecine
+                        </h3>
+                        <p className="text-xs text-slate-500 font-medium leading-relaxed">Contacter un pharmacien conseil ou un pharmacologue en cas de doute persistant sur un dosage.</p>
+                        <button className="mt-8 flex items-center gap-2 text-[10px] font-black text-rose-500 uppercase tracking-widest group-hover:gap-4 transition-all">
+                            Lancer un appel expert <ArrowRight className="w-4 h-4" />
                         </button>
                     </div>
                 </div>
             </div>
         </div>
     );
-}
-
-function X({ className, ...props }: any) {
-    return (
-        <svg
-            {...props}
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className={cn(className)}
-        >
-            <path d="M18 6 6 18" />
-            <path d="m6 6 12 12" />
-        </svg>
-    )
 }
