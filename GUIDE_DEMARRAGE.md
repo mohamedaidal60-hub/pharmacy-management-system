@@ -199,11 +199,11 @@ Chaque page et action est limitée selon le rôle :
 5. **Configurez les URIs autorisés** :
    - **JavaScript origins** :
      - `http://localhost:3000`
-     - `https://pharmacy-management-system-gzlq3dmq8.vercel.app`
+     - `https://pharmacy-management-system-gules.vercel.app`
    
    - **Redirect URIs** :
      - `http://localhost:3000/api/auth/callback/google`
-     - `https://pharmacy-management-system-gzlq3dmq8.vercel.app/api/auth/callback/google`
+     - `https://pharmacy-management-system-gules.vercel.app/api/auth/callback/google`
 
 6. **Copiez les credentials** :
    - Client ID : `xxxxx.apps.googleusercontent.com`

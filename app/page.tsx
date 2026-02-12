@@ -20,6 +20,9 @@ import {
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { usePharmacy } from "@/context/PharmacyContext";
+import { redirect } from "next/navigation";
+
+export const dynamic = "force-dynamic";
 
 const stats = [
   { name: "Ventes du Jour", value: "2,450.00 €", delta: "+12%", bg: "bg-blue-50", color: "text-blue-600", icon: ShoppingCart },
@@ -29,8 +32,12 @@ const stats = [
 ];
 
 export default function Dashboard() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const { selectedStoreId } = usePharmacy();
+
+  if (status === "unauthenticated") {
+    redirect("/login");
+  }
 
   if (!selectedStoreId) {
     return (
