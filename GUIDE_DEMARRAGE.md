@@ -1,4 +1,6 @@
 # 🚀 PharmaOS - Guide de Démarrage Complet
+> **Note de Maintenance** : Si vous voyez une erreur 404 juste après une mise à jour, veuillez patienter 2 minutes que Vercel termine le déploiement.
+
 
 ## 📌 Identifiants de Connexion
 
