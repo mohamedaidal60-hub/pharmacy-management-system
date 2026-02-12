@@ -1,43 +1,95 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
-    Plus,
     Search,
-    Filter,
-    Download,
-    AlertTriangle,
-    Package,
-    ArrowRight,
-    Clock,
-    History,
-    Layers,
+    Plus,
     Scan,
-    Database,
-    ShieldCheck,
-    ChevronRight
+    Download,
+    Filter,
+    Package,
+    AlertTriangle,
+    Layers,
+    ChevronRight,
+    Calendar,
+    X
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { updateStock, addProductBatch } from "@/app/actions/pharmacy";
+import {
+    createProduct,
+    updateStock,
+    addProductBatch,
+    getInventory,
+    generateBarcode
+} from "@/app/actions/pharmacy";
 import { usePharmacy } from "@/context/PharmacyContext";
 
-const mockInventory = [
-    { id: "1", name: "Paracétamol 1000mg", category: "Analgésique", stock: 124, minStock: 20, price: "5.50 €", barcode: "34009300", shelf: "A-01" },
-    { id: "2", name: "Ibuprofène 400mg", category: "AINS", stock: 8, minStock: 15, price: "4.20 €", barcode: "34009250", shelf: "A-02" },
-    { id: "3", name: "Amoxicilline 500mg", category: "Antibiotique", stock: 45, minStock: 10, price: "12.80 €", barcode: "34009500", shelf: "B-03" },
+const CATEGORIES = [
+    "Analgésique",
+    "AINS",
+    "Antibiotique",
+    "Cardiologie",
+    "Diabète",
+    "ORL",
+    "Dermatologie",
+    "Gastro-entérologie",
+    "Neurologie",
+    "Pédiatrie",
+    "Autre"
 ];
 
-export default function InventoryManagement() {
+export default function InventoryPage() {
     const { selectedStoreId } = usePharmacy();
+    const [inventory, setInventory] = useState<any[]>([]);
+    const [filteredInventory, setFilteredInventory] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
+    const [categoryFilter, setCategoryFilter] = useState("all");
+    const [showProductModal, setShowProductModal] = useState(false);
     const [showBatchModal, setShowBatchModal] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState<any>(null);
+
+    useEffect(() => {
+        if (selectedStoreId) {
+            refreshData();
+        }
+    }, [selectedStoreId]);
+
+    useEffect(() => {
+        let filtered = inventory;
+
+        if (searchTerm) {
+            filtered = filtered.filter(item =>
+                item.product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                item.product.molecule?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                item.product.barcode.includes(searchTerm)
+            );
+        }
+
+        if (categoryFilter && categoryFilter !== "all") {
+            filtered = filtered.filter(item => item.product.category === categoryFilter);
+        }
+
+        setFilteredInventory(filtered);
+    }, [searchTerm, categoryFilter, inventory]);
+
+    const refreshData = async () => {
+        if (!selectedStoreId) return;
+        setLoading(true);
+        const data = await getInventory(selectedStoreId);
+        setInventory(data);
+        setFilteredInventory(data);
+        setLoading(false);
+    };
 
     const handleUpdateStock = async (productId: string, change: number) => {
         if (!selectedStoreId) return alert("Sélectionnez une boutique");
         const res = await updateStock(productId, selectedStoreId, change, "Ajustement manuel");
         if (res.success) {
-            alert("Stock mis à jour avec succès !");
+            if (res.pending) {
+                alert("⏳ Modification envoyée pour validation admin");
+            }
+            refreshData();
         } else {
             alert("Erreur: " + res.error);
         }
@@ -45,18 +97,65 @@ export default function InventoryManagement() {
 
     const handleAddBatch = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
+        if (!selectedProduct) return;
         const formData = new FormData(e.currentTarget);
+
         const res = await addProductBatch(
             selectedProduct.id,
-            formData.get("batch") as string,
-            new Date(formData.get("expiry") as string),
-            parseInt(formData.get("qty") as string)
+            formData.get("batchNumber") as string,
+            new Date(formData.get("expiryDate") as string),
+            parseInt(formData.get("quantity") as string)
         );
+
         if (res.success) {
-            alert("Lot ajouté !");
+            if (res.pending) {
+                alert("⏳ Lot envoyé pour validation admin");
+            } else {
+                alert("✅ Lot ajouté !");
+            }
             setShowBatchModal(false);
+            setSelectedProduct(null);
+            refreshData();
+        } else {
+            alert("❌ " + res.error);
         }
     };
+
+    const handleCreateProduct = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        if (!selectedStoreId) return;
+        const formData = new FormData(e.currentTarget);
+
+        const res = await createProduct({
+            name: formData.get("name") as string,
+            molecule: formData.get("molecule") as string,
+            category: formData.get("category") as string,
+            price: parseFloat(formData.get("price") as string),
+            wholesalePrice: parseFloat(formData.get("wprice") as string),
+            barcode: formData.get("barcode") as string,
+            storeId: selectedStoreId
+        });
+
+        if (res.success) {
+            if (res.pending) {
+                alert("⏳ Produit envoyé pour validation admin");
+            } else {
+                alert("✅ Produit créé !");
+            }
+            setShowProductModal(false);
+            refreshData();
+        } else {
+            alert("❌ " + res.error);
+        }
+    };
+
+    const handleGenerateBarcode = async () => {
+        const code = await generateBarcode();
+        const input = document.querySelector('input[name="barcode"]') as HTMLInputElement;
+        if (input) input.value = code;
+    };
+
+    const criticalStockCount = inventory.filter(item => item.quantity <= item.minStock).length;
 
     return (
         <div className="max-w-[1600px] mx-auto space-y-12 pb-20 px-4 sm:px-0">
@@ -69,134 +168,222 @@ export default function InventoryManagement() {
                     <h1 className="text-5xl font-black text-slate-900 tracking-tighter uppercase leading-none">Gestion <span className="text-blue-600 italic">Inventaire.</span></h1>
                 </div>
                 <div className="flex gap-4">
-                    <button className="bg-white text-slate-500 px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] border border-slate-100 hover:bg-slate-50 transition-all flex items-center gap-3">
-                        <Scan className="w-5 h-5" /> Code-barres
+                    <button
+                        onClick={() => alert("Scanner: Connectez un lecteur de code-barres USB")}
+                        className="bg-white text-slate-500 px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] border border-slate-100 hover:bg-slate-50 transition-all flex items-center gap-3"
+                    >
+                        <Scan className="w-5 h-5" /> Scanner
                     </button>
-                    <button className="bg-blue-600 text-white px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-xl hover:bg-blue-700 transition-all flex items-center gap-3">
+                    <button
+                        onClick={() => setShowProductModal(true)}
+                        className="bg-blue-600 text-white px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-xl hover:bg-blue-700 transition-all flex items-center gap-3"
+                    >
                         <Plus className="w-5 h-5" /> Nouveau Produit
                     </button>
                 </div>
             </header>
 
-            {/* Critical Alerts */}
+            {/* Stats */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="bg-rose-600 p-10 rounded-[3.5rem] text-white shadow-2xl relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-[60px] opacity-20 -translate-y-1/2 translate-x-1/2" />
+                <div className="bg-rose-600 p-10 rounded-[3.5rem] text-white shadow-2xl relative overflow-hidden">
                     <p className="text-[10px] font-black uppercase tracking-[0.4em] text-rose-100">Stock Critique</p>
-                    <h3 className="text-5xl font-black mt-4 leading-none tracking-tighter">12</h3>
+                    <h3 className="text-5xl font-black mt-4">{criticalStockCount}</h3>
                     <p className="text-[11px] font-bold mt-8 uppercase tracking-widest text-rose-100 flex items-center gap-2">
-                        <AlertTriangle className="w-4 h-4" /> Produits sous le seuil de sécurité
+                        <AlertTriangle className="w-4 h-4" /> Produits sous le seuil
                     </p>
                 </div>
-                <div className="bg-slate-900 p-10 rounded-[3.5rem] text-white shadow-2xl relative overflow-hidden group">
-                    <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500">Péremption Immédiate</p>
-                    <h3 className="text-5xl font-black mt-4 leading-none tracking-tighter text-amber-500">5</h3>
+                <div className="bg-slate-900 p-10 rounded-[3.5rem] text-white shadow-2xl">
+                    <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500">Flux Inventaire</p>
+                    <h3 className="text-5xl font-black mt-4 text-blue-500">{inventory.length}</h3>
                     <p className="text-[11px] font-bold mt-8 uppercase tracking-widest text-slate-500 flex items-center gap-2">
-                        <Clock className="w-4 h-4" /> Lots périmant dans les 30 jours
+                        <Package className="w-4 h-4" /> Références actives
                     </p>
                 </div>
             </div>
 
-            {/* Inventory List */}
-            <div className="bg-white rounded-[4rem] shadow-sm border border-slate-100 overflow-hidden">
-                <div className="p-10 border-b border-slate-50 bg-slate-50/10 flex flex-col md:flex-row gap-8 items-center justify-between">
-                    <div className="relative max-w-xl w-full group">
-                        <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-600 transition-colors w-5 h-5" />
-                        <input
-                            type="text"
-                            placeholder="Rechercher par nom, molécule ou emplacement..."
-                            className="w-full bg-white border border-slate-200 rounded-2xl py-4 pl-14 pr-4 text-xs font-black uppercase tracking-widest focus:ring-4 focus:ring-blue-600/5 transition-all outline-none"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
-                    </div>
-                    <div className="flex gap-4">
-                        <button className="p-4 bg-white border border-slate-100 rounded-xl text-slate-400 hover:text-blue-600 shadow-sm transition-all"><Filter className="w-5 h-5" /></button>
-                        <button className="p-4 bg-white border border-slate-100 rounded-xl text-slate-400 hover:text-blue-600 shadow-sm transition-all"><Download className="w-5 h-5" /></button>
-                    </div>
+            {/* Search & Filters */}
+            <div className="flex gap-4">
+                <div className="flex-grow relative">
+                    <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+                    <input
+                        type="text"
+                        placeholder="Recherche rapide : nom, molécule, code-barres..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full bg-white border border-slate-100 rounded-[2rem] py-6 pl-14 pr-8 font-bold outline-none shadow-sm"
+                    />
                 </div>
+                <select
+                    value={categoryFilter}
+                    onChange={(e) => setCategoryFilter(e.target.value)}
+                    className="bg-white border border-slate-100 rounded-[2rem] px-8 py-6 font-black uppercase text-xs outline-none shadow-sm"
+                >
+                    <option value="all">Toutes Catégories</option>
+                    {CATEGORIES.map(cat => (
+                        <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                </select>
+            </div>
 
-                <div className="divide-y divide-slate-50 overflow-x-auto no-scrollbar">
-                    {mockInventory.map((item) => (
-                        <div key={item.id} className="p-10 flex items-center justify-between group hover:bg-slate-50/50 transition-all duration-300 min-w-[1000px]">
-                            <div className="flex items-center gap-8 w-1/3">
-                                <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform">
-                                    <Package className="w-8 h-8" />
+            {/* Liste Inventaire */}
+            <div className="space-y-6">
+                {loading ? (
+                    <div className="text-center py-20">
+                        <p className="text-slate-400 font-black text-sm">Chargement...</p>
+                    </div>
+                ) : filteredInventory.length === 0 ? (
+                    <div className="text-center py-20 bg-white rounded-[4rem] border border-slate-100">
+                        <Package className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+                        <p className="text-slate-400 font-bold">Aucun produit trouvé</p>
+                    </div>
+                ) : (
+                    filteredInventory.map((item) => (
+                        <div key={item.id} className="bg-white p-10 rounded-[4rem] border border-slate-100 flex items-center justify-between shadow-sm hover:shadow-xl transition-all">
+                            <div className="flex items-center gap-8 flex-grow">
+                                <div className={cn(
+                                    "w-20 h-20 rounded-3xl flex items-center justify-center text-white font-black text-2xl shadow-lg",
+                                    item.quantity <= item.minStock ? "bg-rose-600" : "bg-blue-600"
+                                )}>
+                                    <Package className="w-10 h-10" />
                                 </div>
-                                <div>
-                                    <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">{item.name}</h3>
-                                    <div className="flex items-center gap-4 mt-2">
-                                        <span className="text-[9px] font-black uppercase tracking-widest bg-blue-50 text-blue-600 px-3 py-1 rounded-full border border-blue-100">{item.category}</span>
-                                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 italic">Code: {item.barcode}</span>
+                                <div className="flex-grow">
+                                    <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">{item.product.name}</h3>
+                                    <div className="flex items-center gap-6 mt-3">
+                                        <span className="text-[10px] font-black text-slate-400 uppercase">Molécule: {item.product.molecule || "N/A"}</span>
+                                        <span className="text-[10px] font-black uppercase px-3 py-1 rounded-full bg-blue-50 text-blue-600">{item.product.category}</span>
+                                        <span className="text-[9px] font-mono text-slate-400">{item.product.barcode}</span>
+                                    </div>
+                                    <div className="flex items-center gap-4 mt-4 text-[10px] font-bold text-slate-500">
+                                        <span>Retail: {item.product.price.toFixed(2)} DA</span>
+                                        <span>•</span>
+                                        <span>Gros: {item.product.wholesalePrice.toFixed(2)} DA</span>
+                                        {item.shelf && (
+                                            <>
+                                                <span>•</span>
+                                                <span>Rayon: {item.shelf}</span>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-8">
+                                    <div className="text-center">
+                                        <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2">Stock</p>
+                                        <div className="flex items-center gap-3">
+                                            <button
+                                                onClick={() => handleUpdateStock(item.product.id, -1)}
+                                                className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center text-slate-400 hover:bg-rose-600 hover:text-white transition-all font-black"
+                                            >-</button>
+                                            <p className={cn(
+                                                "text-2xl font-black font-sans",
+                                                item.quantity <= item.minStock ? "text-rose-600" : "text-slate-900"
+                                            )}>{item.quantity}</p>
+                                            <button
+                                                onClick={() => handleUpdateStock(item.product.id, 1)}
+                                                className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center text-slate-400 hover:bg-blue-600 hover:text-white transition-all font-black"
+                                            >+</button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-
-                            <div className="flex items-center gap-16">
-                                <div className="text-center px-8 border-x border-slate-100">
-                                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2">Emplacement</p>
-                                    <p className="text-sm font-black text-slate-900 uppercase">{item.shelf}</p>
-                                </div>
-                                <div className="text-center">
-                                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2">Quantité</p>
-                                    <div className="flex items-center gap-4">
-                                        <button
-                                            onClick={() => handleUpdateStock(item.id, -1)}
-                                            className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center text-slate-400 hover:bg-rose-500 hover:text-white transition-all font-black"
-                                        >-</button>
-                                        <p className={cn(
-                                            "text-2xl font-black font-sans leading-none",
-                                            item.stock <= item.minStock ? "text-rose-600" : "text-slate-900"
-                                        )}>{item.stock}</p>
-                                        <button
-                                            onClick={() => handleUpdateStock(item.id, 1)}
-                                            className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center text-slate-400 hover:bg-blue-600 hover:text-white transition-all font-black"
-                                        >+</button>
-                                    </div>
-                                </div>
-                            </div>
-
                             <div className="flex items-center gap-4">
                                 <button
-                                    onClick={() => { setSelectedProduct(item); setShowBatchModal(true); }}
-                                    className="px-6 py-3 bg-slate-50 text-slate-400 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all flex items-center gap-3 border border-slate-100"
+                                    onClick={() => { setSelectedProduct(item.product); setShowBatchModal(true); }}
+                                    className="px-6 py-3 bg-slate-50 text-slate-400 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all flex items-center gap-3"
                                 >
                                     <Layers className="w-4 h-4" /> Gérer Lots
                                 </button>
-                                <button className="p-4 bg-slate-900 text-white rounded-xl hover:bg-blue-600 transition-all shadow-lg shadow-slate-200">
-                                    <ChevronRight className="w-5 h-5" />
-                                </button>
                             </div>
                         </div>
-                    ))}
-                </div>
+                    ))
+                )}
             </div>
 
-            {/* Batch Modal */}
-            {showBatchModal && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-950/40 backdrop-blur-md animate-in fade-in">
-                    <div className="bg-white rounded-[4rem] w-full max-w-2xl p-16 shadow-2xl relative">
-                        <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tight mb-4">Nouveau Lot <span className="text-blue-600">Trace.</span></h2>
-                        <p className="text-slate-500 font-medium mb-12">Ajoutez un lot pour la traçabilité de {selectedProduct?.name}</p>
+            {/* Modal Nouveau Produit */}
+            {showProductModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-950/40 backdrop-blur-md">
+                    <div className="bg-white rounded-[4rem] w-full max-w-3xl p-16 shadow-2xl max-h-[90vh] overflow-y-auto">
+                        <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tight mb-4">Nouveau <span className="text-blue-600">Produit.</span></h2>
+                        <p className="text-slate-500 font-medium mb-12">Enregistrez une nouvelle référence dans le catalogue.</p>
 
-                        <form onSubmit={handleAddBatch} className="space-y-8">
+                        <form onSubmit={handleCreateProduct} className="space-y-8">
                             <div className="grid grid-cols-2 gap-8">
                                 <div className="space-y-4">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Numéro de Lot</label>
-                                    <input name="batch" required className="w-full bg-slate-50 border-none rounded-2xl py-5 px-6 font-bold outline-none focus:ring-4 focus:ring-blue-600/5" placeholder="B-2024-X" />
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Désignation</label>
+                                    <input name="name" required className="w-full bg-slate-50 border-none rounded-2xl py-5 px-6 font-bold outline-none" placeholder="Ex: Panadol 500mg" />
+                                </div>
+                                <div className="space-y-4">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Molécule</label>
+                                    <input name="molecule" className="w-full bg-slate-50 border-none rounded-2xl py-5 px-6 font-bold outline-none" placeholder="Ex: Paracétamol" />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-8">
+                                <div className="space-y-4">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Catégorie</label>
+                                    <select name="category" required className="w-full bg-slate-50 border-none rounded-2xl py-5 px-6 font-black uppercase text-xs outline-none">
+                                        <option value="">-- Sélectionnez --</option>
+                                        {CATEGORIES.map(cat => (
+                                            <option key={cat} value={cat}>{cat}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="space-y-4">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2 flex items-center justify-between">
+                                        <span>Code-Barres (EAN)</span>
+                                        <button
+                                            type="button"
+                                            onClick={handleGenerateBarcode}
+                                            className="text-[9px] font-black uppercase bg-blue-600 text-white px-3 py-1 rounded-lg hover:bg-blue-700 transition-all"
+                                        >
+                                            Auto-Générer
+                                        </button>
+                                    </label>
+                                    <input name="barcode" required className="w-full bg-slate-50 border-none rounded-2xl py-5 px-6 font-bold outline-none" placeholder="625123456789" />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-8">
+                                <div className="space-y-4">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Prix Public (Retail)</label>
+                                    <input name="price" type="number" step="0.01" required className="w-full bg-slate-50 border-none rounded-2xl py-5 px-6 font-bold outline-none" placeholder="0.00" />
+                                </div>
+                                <div className="space-y-4">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Prix de Gros (Wholesale)</label>
+                                    <input name="wprice" type="number" step="0.01" required className="w-full bg-slate-50 border-none rounded-2xl py-5 px-6 font-bold outline-none" placeholder="0.00" />
+                                </div>
+                            </div>
+                            <div className="flex gap-4 pt-6">
+                                <button type="button" onClick={() => setShowProductModal(false)} className="flex-grow bg-slate-100 py-8 rounded-[2rem] font-black uppercase text-[10px]">Annuler</button>
+                                <button type="submit" className="flex-grow bg-blue-600 text-white py-8 rounded-[2rem] font-black uppercase text-[10px] shadow-2xl">Créer le Produit</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal Gestion Lots */}
+            {showBatchModal && selectedProduct && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-950/40 backdrop-blur-md">
+                    <div className="bg-white rounded-[4rem] w-full max-w-2xl p-16 shadow-2xl">
+                        <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tight mb-4">Gérer <span className="text-blue-600">Lots</span></h2>
+                        <p className="text-slate-500 font-medium mb-12">Produit: <span className="font-black text-slate-900">{selectedProduct.name}</span></p>
+
+                        <form onSubmit={handleAddBatch} className="space-y-8">
+                            <div className="space-y-4">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Numéro de Lot</label>
+                                <input name="batchNumber" required className="w-full bg-slate-50 border-none rounded-2xl py-6 px-8 font-bold outline-none" placeholder="LOT-2024-001" />
+                            </div>
+                            <div className="grid grid-cols-2 gap-8">
+                                <div className="space-y-4">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Date d'Expiration</label>
+                                    <input name="expiryDate" type="date" required className="w-full bg-slate-50 border-none rounded-2xl py-6 px-8 font-bold outline-none" />
                                 </div>
                                 <div className="space-y-4">
                                     <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Quantité</label>
-                                    <input name="qty" type="number" required className="w-full bg-slate-50 border-none rounded-2xl py-5 px-6 font-bold outline-none" placeholder="50" />
+                                    <input name="quantity" type="number" min="1" required className="w-full bg-slate-50 border-none rounded-2xl py-6 px-8 font-bold outline-none" />
                                 </div>
                             </div>
-                            <div className="space-y-4">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Date d'expiration</label>
-                                <input name="expiry" type="date" required className="w-full bg-slate-50 border-none rounded-2xl py-5 px-6 font-bold outline-none" />
-                            </div>
-                            <div className="flex gap-4 mt-12">
-                                <button type="button" onClick={() => setShowBatchModal(false)} className="flex-grow bg-slate-100 py-6 rounded-3xl font-black uppercase tracking-widest text-[10px]">Annuler</button>
-                                <button type="submit" className="flex-grow bg-blue-600 text-white py-6 rounded-3xl font-black uppercase tracking-widest text-[10px] shadow-xl shadow-blue-200">Enregistrer</button>
+                            <div className="flex gap-4">
+                                <button type="button" onClick={() => { setShowBatchModal(false); setSelectedProduct(null); }} className="flex-grow bg-slate-100 py-8 rounded-[2rem] font-black uppercase text-[10px]">Annuler</button>
+                                <button type="submit" className="flex-grow bg-blue-600 text-white py-8 rounded-[2rem] font-black uppercase text-[10px] shadow-2xl">Enregistrer le Lot</button>
                             </div>
                         </form>
                     </div>

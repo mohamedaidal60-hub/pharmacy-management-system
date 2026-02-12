@@ -15,46 +15,72 @@ enum UserRole {
   WHOLESALE_BUYER
 }
 
+enum ActionType {
+  CREATE_PRODUCT
+  UPDATE_STOCK
+  CREATE_ORDER
+  DELETE_PRODUCT
+  CREATE_BATCH
+  UPDATE_PRICE
+}
+
+enum ActionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  MODIFIED
+}
+
 model Store {
-  id        String   @id @default(cuid())
-  name      String
-  address   String
-  phone     String?
-  users     User[]
-  products  Product[]
-  orders    Order[]
-  inventory Inventory[]
-  createdAt DateTime @default(now())
+  id             String          @id @default(cuid())
+  name           String
+  address        String
+  phone          String?
+  users          User[]
+  products       Product[]
+  orders         Order[]
+  inventory      Inventory[]
+  pendingActions PendingAction[]
+  createdAt      DateTime        @default(now())
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String    @unique
-  password      String
-  role          UserRole  @default(ASSISTANT)
-  storeId       String?
-  store         Store?    @relation(fields: [storeId], references: [id])
-  messagesSent  Message[] @relation("SentMessages")
-  messagesRecv  Message[] @relation("ReceivedMessages")
-  createdAt     DateTime  @default(now())
+  id                    String          @id @default(cuid())
+  name                  String?
+  email                 String          @unique
+  password              String
+  role                  UserRole        @default(ASSISTANT)
+  isActive              Boolean         @default(true)
+  canCreateUsers        Boolean         @default(false)
+  storeId               String?
+  store                 Store?          @relation(fields: [storeId], references: [id])
+  createdById           String?
+  createdBy             User?           @relation("UserCreator", fields: [createdById], references: [id])
+  createdUsers          User[]          @relation("UserCreator")
+  messagesSent          Message[]       @relation("SentMessages")
+  messagesRecv          Message[]       @relation("ReceivedMessages")
+  notifications         Notification[]
+  pendingActionsCreated PendingAction[] @relation("ActionCreator")
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
 }
 
 model Product {
-  id          String         @id @default(cuid())
-  name        String
-  molecule    String?
-  category    String
-  description String?
-  price       Float          // Retail Price
-  wholesalePrice Float       // Base Wholesale Price
-  barcode     String         @unique
-  rxRequired  Boolean        @default(false)
-  storeId     String
-  store       Store          @relation(fields: [storeId], references: [id])
-  batches     ProductBatch[]
-  inventory   Inventory[]
-  orderItems  OrderItem[]
+  id             String         @id @default(cuid())
+  name           String
+  molecule       String?
+  category       String
+  description    String?
+  price          Float // Retail Price
+  wholesalePrice Float // Base Wholesale Price
+  barcode        String         @unique
+  rxRequired     Boolean        @default(false)
+  storeId        String
+  store          Store          @relation(fields: [storeId], references: [id])
+  batches        ProductBatch[]
+  inventory      Inventory[]
+  orderItems     OrderItem[]
+  createdAt      DateTime       @default(now())
 }
 
 model ProductBatch {
@@ -81,11 +107,11 @@ model Inventory {
 }
 
 model Patient {
-  id            String   @id @default(cuid())
+  id            String           @id @default(cuid())
   name          String
   email         String?
   phone         String?
-  loyaltyPoints Int      @default(0)
+  loyaltyPoints Int              @default(0)
   insuranceId   String?
   insuranceNum  String?
   orders        Order[]
@@ -97,7 +123,7 @@ model Order {
   orderNumber String      @unique
   total       Float
   status      String      @default("PENDING") // PENDING, COMPLETED, CANCELLED
-  type        String      @default("RETAIL")  // RETAIL or WHOLESALE
+  type        String      @default("RETAIL") // RETAIL or WHOLESALE
   storeId     String
   store       Store       @relation(fields: [storeId], references: [id])
   patientId   String?
@@ -117,13 +143,13 @@ model OrderItem {
 }
 
 model InsuranceClaim {
-  id          String   @id @default(cuid())
-  patientId   String
-  patient     Patient  @relation(fields: [patientId], references: [id])
-  orderId     String
-  status      String   @default("SUBMITTED") // SUBMITTED, APPROVED, DENIED
-  amount      Float
-  createdAt   DateTime @default(now())
+  id        String   @id @default(cuid())
+  patientId String
+  patient   Patient  @relation(fields: [patientId], references: [id])
+  orderId   String
+  status    String   @default("SUBMITTED") // SUBMITTED, APPROVED, DENIED
+  amount    Float
+  createdAt DateTime @default(now())
 }
 
 model Message {
@@ -131,6 +157,7 @@ model Message {
   content    String
   senderId   String
   receiverId String
+  isRead     Boolean  @default(false)
   sender     User     @relation("SentMessages", fields: [senderId], references: [id])
   receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
   createdAt  DateTime @default(now())
@@ -143,5 +170,33 @@ model Task {
   dueDate     DateTime
   status      String   @default("TODO")
   storeId     String
-  // Add relation if needed
+  createdAt   DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  title     String
+  message   String
+  type      String // INFO, WARNING, ACTION_REQUIRED, VALIDATION
+  isRead    Boolean  @default(false)
+  actionId  String? // Lien vers PendingAction si applicable
+  createdAt DateTime @default(now())
+}
+
+model PendingAction {
+  id              String       @id @default(cuid())
+  type            ActionType
+  status          ActionStatus @default(PENDING)
+  createdById     String
+  createdBy       User         @relation("ActionCreator", fields: [createdById], references: [id])
+  storeId         String
+  store           Store        @relation(fields: [storeId], references: [id])
+  originalData    String // JSON stringifié des données originales
+  modifiedData    String? // JSON des modifications de l'admin
+  adminComment    String?
+  validatedAt     DateTime?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
 }

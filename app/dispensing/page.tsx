@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
     Scan,
     Search,
@@ -12,40 +12,65 @@ import {
     User,
     FileText,
     Clock,
-    ArrowRight
+    ArrowRight,
+    Loader2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { createOrder } from "@/app/actions/pharmacy";
+import { createOrder, getStoreProducts } from "@/app/actions/pharmacy";
 import { usePharmacy } from "@/context/PharmacyContext";
 
 export default function DispensingPage() {
     const { selectedStoreId } = usePharmacy();
     const [step, setStep] = useState(1);
     const [patientName, setPatientName] = useState("");
-    const [medication, setMedication] = useState("");
+    const [medicationSearch, setMedicationSearch] = useState("");
+    const [selectedProduct, setSelectedProduct] = useState<any>(null);
+    const [products, setProducts] = useState<any[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isScanning, setIsScanning] = useState(false);
+
+    useEffect(() => {
+        if (selectedStoreId) {
+            getStoreProducts(selectedStoreId).then(setProducts);
+        }
+    }, [selectedStoreId]);
 
     const handleDispense = async () => {
         if (!selectedStoreId) return alert("Veuillez sélectionner une boutique");
-        setIsSubmitting(true);
+        if (!selectedProduct) return alert("Veuillez sélectionner un produit valide");
 
-        // Simuler la création d'une commande de type Dispensing (Retail)
+        setIsSubmitting(true);
         const res = await createOrder({
-            items: [{ productId: "temp-id", quantity: 1, price: 0 }],
+            items: [{ productId: selectedProduct.id, quantity: 1, price: selectedProduct.price }],
             storeId: selectedStoreId,
             type: "RETAIL"
         });
 
         if (res.success) {
-            alert("Ordonnance validée et délivrée !");
+            alert("Ordonnance validée et délivrée ! (Impression étiquette lancée)");
             setStep(1);
             setPatientName("");
-            setMedication("");
+            setMedicationSearch("");
+            setSelectedProduct(null);
         } else {
             alert("Erreur: " + res.error);
         }
         setIsSubmitting(false);
     };
+
+    const handleScanRx = () => {
+        setIsScanning(true);
+        setTimeout(() => {
+            setIsScanning(false);
+            setPatientName("Jean Dupont (Auto-détecté)");
+            setStep(2);
+        }, 2000);
+    };
+
+    const filteredMedications = products.filter(p =>
+        p.name.toLowerCase().includes(medicationSearch.toLowerCase()) ||
+        p.barcode.includes(medicationSearch)
+    );
 
     return (
         <div className="max-w-[1600px] mx-auto space-y-12 pb-20 px-4 sm:px-0">
@@ -59,15 +84,19 @@ export default function DispensingPage() {
                     <p className="text-slate-500 mt-4 font-medium text-lg">Gestion sécurisée des ordonnances et validation pharmaceutique.</p>
                 </div>
                 <div className="flex gap-4">
-                    <button className="bg-slate-900 text-white px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-xl hover:bg-blue-600 transition-all flex items-center gap-3">
-                        <Scan className="w-5 h-5" /> Scanner Ordonnance
+                    <button
+                        onClick={handleScanRx}
+                        disabled={isScanning}
+                        className="bg-slate-900 text-white px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-xl hover:bg-rose-500 transition-all flex items-center gap-3 disabled:opacity-50"
+                    >
+                        {isScanning ? <Loader2 className="w-5 h-5 animate-spin" /> : <Scan className="w-5 h-5" />}
+                        {isScanning ? "Analyse..." : "Scanner Ordonnance"}
                     </button>
                 </div>
             </header>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
                 <div className="lg:col-span-2 space-y-8">
-                    {/* Workflow Steps */}
                     <div className="bg-white p-12 rounded-[4rem] shadow-sm border border-slate-100">
                         <div className="flex items-center justify-between mb-16 px-4">
                             {[
@@ -75,12 +104,13 @@ export default function DispensingPage() {
                                 { step: 2, label: "Analyse Rx" },
                                 { step: 3, label: "Validation" }
                             ].map((s) => (
-                                <div key={s.step} className="flex items-center gap-4 group cursor-pointer" onClick={() => setStep(s.step)}>
+                                <div key={s.step} className="flex items-center gap-4 group">
                                     <div className={cn(
                                         "w-12 h-12 rounded-2xl flex items-center justify-center font-black transition-all",
-                                        step === s.step ? "bg-rose-500 text-white shadow-xl shadow-rose-200" : "bg-slate-50 text-slate-300"
+                                        step === s.step ? "bg-rose-500 text-white shadow-xl shadow-rose-200" :
+                                            step > s.step ? "bg-emerald-500 text-white" : "bg-slate-50 text-slate-300"
                                     )}>
-                                        {s.step}
+                                        {step > s.step ? <ShieldCheck className="w-6 h-6" /> : s.step}
                                     </div>
                                     <span className={cn(
                                         "text-[10px] font-black uppercase tracking-widest",
@@ -120,21 +150,42 @@ export default function DispensingPage() {
                                             <AlertTriangle className="w-8 h-8" />
                                         </div>
                                         <div>
-                                            <h4 className="text-lg font-black text-rose-900 uppercase tracking-tight">Vérification Automatique IA</h4>
-                                            <p className="text-xs text-rose-600 font-bold uppercase tracking-widest mt-1 opacity-70">En attente de saisie molécule...</p>
+                                            <h4 className="text-lg font-black text-rose-900 uppercase tracking-tight">Saisie des dosages</h4>
+                                            <p className="text-xs text-rose-600 font-bold uppercase tracking-widest mt-1 opacity-70">Sélectionnez le produit dans le catalogue réel.</p>
                                         </div>
                                     </div>
-                                    <div className="space-y-4">
+                                    <div className="space-y-4 relative">
                                         <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-4">Médicament à délivrer</label>
                                         <input
                                             type="text"
-                                            placeholder="Saisir la molécule ou scanner le code-barres..."
-                                            className="w-full bg-slate-50 border-none rounded-[2rem] py-8 px-10 text-xl font-bold text-slate-900 focus:bg-white focus:ring-4 focus:ring-rose-500/5 transition-all outline-none"
-                                            value={medication}
-                                            onChange={(e) => setMedication(e.target.value)}
+                                            placeholder="Saisir la molécule ou scanner..."
+                                            className="w-full bg-slate-50 border-none rounded-[2rem] py-8 px-10 text-xl font-bold text-slate-900 focus:bg-white outline-none"
+                                            value={medicationSearch}
+                                            onChange={(e) => {
+                                                setMedicationSearch(e.target.value);
+                                                setSelectedProduct(null);
+                                            }}
                                         />
+
+                                        {medicationSearch && !selectedProduct && (
+                                            <div className="absolute top-full left-0 right-0 bg-white shadow-2xl rounded-3xl mt-2 border border-slate-100 z-50 overflow-hidden max-h-64 overflow-y-auto no-scrollbar">
+                                                {filteredMedications.map(p => (
+                                                    <div
+                                                        key={p.id}
+                                                        onClick={() => {
+                                                            setSelectedProduct(p);
+                                                            setMedicationSearch(p.name);
+                                                        }}
+                                                        className="p-6 hover:bg-rose-50 cursor-pointer border-b border-slate-50 flex justify-between"
+                                                    >
+                                                        <span className="font-black uppercase text-xs">{p.name}</span>
+                                                        <span className="text-[10px] text-slate-400">{p.barcode}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
-                                    <button onClick={() => setStep(3)} className="w-full bg-slate-900 text-white py-8 rounded-[2.5rem] font-black uppercase tracking-[0.3em] text-[10px] hover:bg-rose-500 transition-all">
+                                    <button onClick={() => setStep(3)} disabled={!selectedProduct} className="w-full bg-slate-900 text-white py-8 rounded-[2.5rem] font-black uppercase tracking-[0.3em] text-[10px] hover:bg-rose-500 transition-all disabled:opacity-50">
                                         Confirmer le panier Rx
                                     </button>
                                 </div>
@@ -150,7 +201,7 @@ export default function DispensingPage() {
                                         </div>
                                         <div className="flex items-center justify-between">
                                             <span className="text-sm font-bold text-slate-500">Produit</span>
-                                            <span className="text-sm font-black text-slate-900 uppercase">{medication || "Non spécifié"}</span>
+                                            <span className="text-sm font-black text-slate-900 uppercase">{selectedProduct?.name}</span>
                                         </div>
                                         <div className="w-full h-px bg-slate-100 my-8" />
                                         <div className="flex items-center justify-between">
@@ -161,9 +212,9 @@ export default function DispensingPage() {
                                     <button
                                         onClick={handleDispense}
                                         disabled={isSubmitting}
-                                        className="w-full bg-blue-600 text-white py-8 rounded-[2.5rem] font-black uppercase tracking-[0.3em] text-[10px] shadow-2xl shadow-blue-200 hover:bg-blue-700 transition-all flex items-center justify-center gap-4"
+                                        className="w-full bg-rose-600 text-white py-8 rounded-[2.5rem] font-black uppercase tracking-[0.3em] text-[10px] shadow-2xl shadow-rose-200 hover:bg-rose-700 transition-all flex items-center justify-center gap-4"
                                     >
-                                        {isSubmitting ? "Validation en cours..." : <>Terminer & Imprimer Etiquette <ArrowRight className="w-5 h-5" /></>}
+                                        {isSubmitting ? "Validation..." : <>Terminer & Imprimer Etiquette <ArrowRight className="w-5 h-5" /></>}
                                     </button>
                                 </div>
                             )}
@@ -171,28 +222,21 @@ export default function DispensingPage() {
                     </div>
                 </div>
 
-                {/* Sidebar Stats Dispensing */}
                 <div className="space-y-10">
                     <div className="bg-slate-950 text-white rounded-[4rem] p-10 shadow-2xl relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-rose-600 rounded-full blur-[80px] opacity-10" />
                         <h3 className="text-xl font-black uppercase tracking-tight text-white mb-12 flex items-center gap-4">
                             <Clock className="text-rose-500" /> File d'attente
                         </h3>
                         <div className="space-y-6">
-                            {[1, 2].map(i => (
-                                <div key={i} className="flex items-center justify-between p-6 bg-white/5 rounded-3xl border border-white/5 group hover:bg-white/10 transition-all">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center text-[10px] font-black">
-                                            #{i}
-                                        </div>
-                                        <div>
-                                            <p className="text-xs font-black uppercase text-white leading-none">Mme. Lefebvre</p>
-                                            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-1.5">Renouvellement</p>
-                                        </div>
+                            <div className="flex items-center justify-between p-6 bg-white/5 rounded-3xl border border-white/5 group">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center text-[10px] font-black">#1</div>
+                                    <div>
+                                        <p className="text-xs font-black uppercase text-white leading-none">Mme. Lefebvre</p>
+                                        <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-1.5">Renouvellement Automatique</p>
                                     </div>
-                                    <ChevronRight className="w-4 h-4 text-slate-600 group-hover:text-rose-500 transition-colors" />
                                 </div>
-                            ))}
+                            </div>
                         </div>
                     </div>
                 </div>

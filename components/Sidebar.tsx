@@ -17,7 +17,10 @@ import {
     Stethoscope,
     Building2,
     Syringe,
-    History
+    History,
+    Shield,
+    Bell,
+    UserCog
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { signOut } from "next-auth/react";
@@ -33,6 +36,11 @@ const navigation = [
     { name: "Planning", href: "/calendar", icon: Calendar, role: ["ADMIN", "PHARMACIST", "ASSISTANT"] },
     { name: "Messages", href: "/messages", icon: MessageSquare, role: ["ADMIN", "PHARMACIST", "ASSISTANT"] },
     { name: "Rapports", href: "/reports", icon: BarChart3, role: ["ADMIN"] },
+];
+
+const adminNavigation = [
+    { name: "Gestion Utilisateurs", href: "/admin/users", icon: UserCog },
+    { name: "Centre de Validation", href: "/admin/validations", icon: Bell },
 ];
 
 export default function Sidebar({ userRole }: { userRole: string }) {
@@ -80,6 +88,37 @@ export default function Sidebar({ userRole }: { userRole: string }) {
                         })}
                     </div>
                 </div>
+
+                {userRole === "ADMIN" && (
+                    <div className="mb-6 px-4 pt-6 border-t border-white/5">
+                        <p className="text-[9px] font-black uppercase tracking-[0.4em] text-rose-600 mb-6 flex items-center gap-2">
+                            <Shield className="w-3 h-3" /> Admin Panel
+                        </p>
+                        <div className="space-y-1.5">
+                            {adminNavigation.map((item) => {
+                                const isActive = pathname === item.href;
+                                return (
+                                    <Link
+                                        key={item.name}
+                                        href={item.href}
+                                        className={cn(
+                                            "flex items-center justify-between px-6 py-4 rounded-2xl transition-all duration-300 group",
+                                            isActive
+                                                ? "bg-rose-600 text-white shadow-xl shadow-rose-900/20"
+                                                : "hover:bg-white/5 hover:text-white"
+                                        )}
+                                    >
+                                        <div className="flex items-center gap-4">
+                                            <item.icon className={cn("w-5 h-5", isActive ? "text-white" : "text-slate-500 group-hover:text-rose-500")} />
+                                            <span className="text-[11px] font-black uppercase tracking-widest">{item.name}</span>
+                                        </div>
+                                        {isActive && <ChevronRight className="w-4 h-4 text-white/50" />}
+                                    </Link>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
             </nav>
 
             <div className="p-8 mt-auto border-t border-white/5">

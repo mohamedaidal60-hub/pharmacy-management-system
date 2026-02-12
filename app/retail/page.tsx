@@ -1,38 +1,46 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
     Search,
     ShoppingCart,
     Plus,
-    Minus,
     X,
-    CreditCard,
     ChevronRight,
     Stethoscope,
     Scan,
     ShieldCheck,
-    Building2,
     Trash2,
-    ArrowRight
+    ArrowRight,
+    Package
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { createOrder } from "@/app/actions/pharmacy";
+import { createOrder, getStoreProducts } from "@/app/actions/pharmacy";
 import { usePharmacy } from "@/context/PharmacyContext";
-
-const products = [
-    { id: "1", name: "Doliprane 1g", price: 3.50, category: "Analgésique", rx: false, stock: 154 },
-    { id: "2", name: "Amoxicilline 500mg", price: 12.80, category: "Antibiotique", rx: true, stock: 45 },
-    { id: "3", name: "Sirop Toux Humex", price: 8.90, category: "ORL", rx: false, stock: 22 },
-];
 
 export default function RetailPage() {
     const { selectedStoreId } = usePharmacy();
+    const [products, setProducts] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
     const [cart, setCart] = useState<any[]>([]);
     const [showCheckout, setShowCheckout] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
     const [insuranceCovered, setInsuranceCovered] = useState(false);
+
+    useEffect(() => {
+        if (selectedStoreId) {
+            refreshProducts();
+        }
+    }, [selectedStoreId]);
+
+    const refreshProducts = async () => {
+        if (!selectedStoreId) return;
+        setLoading(true);
+        const data = await getStoreProducts(selectedStoreId);
+        setProducts(data);
+        setLoading(false);
+    };
 
     const addToCart = (product: any) => {
         setCart(prev => {
@@ -50,7 +58,7 @@ export default function RetailPage() {
     };
 
     const subtotal = cart.reduce((acc, i) => acc + i.price * i.qty, 0);
-    const total = insuranceCovered ? subtotal * 0.35 : subtotal; // Simuler 65% de prise en charge
+    const total = insuranceCovered ? subtotal * 0.35 : subtotal;
 
     const handleCheckout = async () => {
         if (!selectedStoreId) return alert("Sélectionnez une boutique");
@@ -66,11 +74,17 @@ export default function RetailPage() {
             alert("Vente enregistrée avec succès !");
             setCart([]);
             setShowCheckout(false);
+            refreshProducts(); // Refresh stock
         } else {
             alert("Erreur: " + res.error);
         }
         setIsProcessing(false);
     };
+
+    const filteredProducts = products.filter(p =>
+        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.barcode.includes(searchTerm)
+    );
 
     return (
         <div className="max-w-[1600px] mx-auto min-h-screen flex gap-12 pb-20 px-4 sm:px-0 relative">
@@ -95,41 +109,52 @@ export default function RetailPage() {
                     </div>
                 </header>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-                    {products.map((product) => (
-                        <div key={product.id} className="bg-white rounded-[3.5rem] p-4 shadow-sm border border-slate-100 group hover:shadow-2xl hover:border-emerald-200 transition-all duration-500 overflow-hidden relative">
-                            <div className="bg-slate-50 rounded-[3rem] p-10 flex flex-col items-center justify-center relative">
-                                {product.rx && (
-                                    <div className="absolute top-6 right-6 bg-rose-500 text-white p-3 rounded-2xl shadow-lg">
-                                        <Stethoscope className="w-5 h-5" />
+                {loading ? (
+                    <div className="flex items-center justify-center h-64">
+                        <p className="text-xs font-black uppercase tracking-widest animate-pulse text-slate-400">Initialisation du catalogue...</p>
+                    </div>
+                ) : filteredProducts.length === 0 ? (
+                    <div className="text-center py-20 bg-white rounded-[4rem] border border-slate-100">
+                        <Package className="w-16 h-16 text-slate-100 mx-auto mb-6" />
+                        <p className="text-xs font-black uppercase tracking-widest text-slate-400">Aucun produit disponible en boutique</p>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                        {filteredProducts.map((product) => (
+                            <div key={product.id} className="bg-white rounded-[3.5rem] p-4 shadow-sm border border-slate-100 group hover:shadow-2xl hover:border-emerald-200 transition-all duration-500 overflow-hidden relative">
+                                <div className="bg-slate-50 rounded-[3rem] p-10 flex flex-col items-center justify-center relative">
+                                    {product.rxRequired && (
+                                        <div className="absolute top-6 right-6 bg-rose-500 text-white p-3 rounded-2xl shadow-lg">
+                                            <Stethoscope className="w-5 h-5" />
+                                        </div>
+                                    )}
+                                    <div className="w-24 h-24 bg-white rounded-[2rem] flex items-center justify-center border border-slate-100 shadow-sm group-hover:scale-110 transition-transform">
+                                        <ShoppingCart className="w-8 h-8 text-emerald-500" />
                                     </div>
-                                )}
-                                <div className="w-24 h-24 bg-white rounded-[2rem] flex items-center justify-center border border-slate-100 shadow-sm group-hover:scale-110 transition-transform">
-                                    <ShoppingCart className="w-8 h-8 text-emerald-500" />
+                                    <div className="mt-8 text-center">
+                                        <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">{product.name}</h3>
+                                        <p className="text-[10px] font-black uppercase text-slate-400 mt-2 tracking-widest">{product.category}</p>
+                                    </div>
                                 </div>
-                                <div className="mt-8 text-center">
-                                    <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">{product.name}</h3>
-                                    <p className="text-[10px] font-black uppercase text-slate-400 mt-2 tracking-widest">{product.category}</p>
+                                <div className="p-8 flex items-center justify-between">
+                                    <div>
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Prix Unité</p>
+                                        <p className="text-2xl font-black text-slate-900 font-sans tracking-tight">{product.price.toFixed(2)} €</p>
+                                    </div>
+                                    <button
+                                        onClick={() => addToCart(product)}
+                                        className="bg-slate-900 text-white p-5 rounded-2xl hover:bg-emerald-500 transition-all shadow-xl shadow-slate-200"
+                                    >
+                                        <Plus className="w-6 h-6" />
+                                    </button>
                                 </div>
                             </div>
-                            <div className="p-8 flex items-center justify-between">
-                                <div>
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Prix Unité</p>
-                                    <p className="text-2xl font-black text-slate-900 font-sans tracking-tight">{product.price.toFixed(2)} €</p>
-                                </div>
-                                <button
-                                    onClick={() => addToCart(product)}
-                                    className="bg-slate-900 text-white p-5 rounded-2xl hover:bg-emerald-500 transition-all shadow-xl shadow-slate-200"
-                                >
-                                    <Plus className="w-6 h-6" />
-                                </button>
-                            </div>
-                        </div>
-                    ))}
-                </div>
+                        ))}
+                    </div>
+                )}
             </div>
 
-            {/* Checkout Sidebar */}
+            {/* Checkout Sidebar remains the same */}
             <aside className={cn(
                 "fixed right-0 top-0 h-screen w-[450px] bg-slate-950 text-white shadow-2xl transition-transform duration-700 flex flex-col z-[60]",
                 showCheckout ? "translate-x-0" : "translate-x-full"
@@ -155,7 +180,7 @@ export default function RetailPage() {
                         <div key={item.id} className="flex items-center justify-between group">
                             <div className="flex items-center gap-6">
                                 <div className="w-14 h-14 bg-white/5 rounded-2xl flex items-center justify-center text-emerald-400 border border-white/5">
-                                    {item.rx ? <Stethoscope className="w-6 h-6" /> : <Package className="w-6 h-6" />}
+                                    {item.rxRequired ? <Stethoscope className="w-6 h-6" /> : <Package className="w-6 h-6" />}
                                 </div>
                                 <div>
                                     <h4 className="text-sm font-black uppercase tracking-tight">{item.name}</h4>

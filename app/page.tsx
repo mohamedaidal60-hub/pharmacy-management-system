@@ -14,7 +14,8 @@ import {
   Building2,
   Syringe,
   BarChart3,
-  Truck
+  Truck,
+  ChevronRight
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
