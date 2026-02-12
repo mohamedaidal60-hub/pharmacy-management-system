@@ -2,20 +2,17 @@
 
 ## 📌 Identifiants de Connexion
 
-### Super Admin
-- **Email**: `admin@pharmaos.dz`
+### 🔑 Administrateur Unique (Email + Mot de Passe)
+- **Email**: `amperella@gmail.com`
 - **Mot de passe**: `admin123`
 - **Pouvoirs**: Accès total + Gestion utilisateurs + Validation des actions
+- **Note**: C'est le **SEUL compte** avec accès par identifiants classiques
 
-### Pharmacien
-- **Email**: `amina.benali@pharmaos.dz`
-- **Mot de passe**: `demo123`
-- **Rôle**: Peut créer produits, gérer stock, vendre (avec validation admin)
-
-### Assistant
-- **Email**: `karim.meziane@pharmaos.dz`
-- **Mot de passe**: `demo123`
-- **Rôle**: Accès limité aux ventes et consultations
+### 🌐 Autres Utilisateurs (Google OAuth uniquement)
+- **Méthode de connexion**: Bouton "Se connecter avec Google" sur la page de login
+- **Création automatique**: Lors de la première connexion Google, un compte est créé automatiquement
+- **Rôle par défaut**: ASSISTANT (peut être modifié par l'admin)
+- **Pharmacie assignée**: Pharmacie Centrale Alger (store_001)
 
 ---
 
@@ -26,6 +23,20 @@
 - ✅ Seuls les utilisateurs authentifiés peuvent accéder à l'application
 - ✅ Redirection automatique vers `/login` si non connecté
 - ✅ Aucun accès direct possible sans identifiants valides
+
+### Deux Méthodes de Connexion
+
+#### 1. Google OAuth (Staff Standard)
+- Bouton principal sur la page de login
+- Connexion instantanée via compte Google
+- Création automatique du compte dans PharmaOS
+- Rôle initial : ASSISTANT
+- L'admin peut ensuite modifier le rôle et la pharmacie assignée
+
+#### 2. Email + Mot de Passe (Admin Uniquement)
+- Réservé à `amperella@gmail.com`
+- Formulaire classique sous le bouton Google
+- Accès complet à toutes les fonctionnalités admin
 
 ### Système de Permissions par Rôle
 Chaque page et action est limitée selon le rôle :
@@ -53,7 +64,11 @@ Chaque page et action est limitée selon le rôle :
 
 ✅ **Activer/Désactiver des comptes** :
    - Bouton toggle pour bloquer/débloquer un utilisateur
-   - Les utilisateurs désactivés ne peuvent plus se connecter
+   - Les utilisateurs désactivés ne peuvent plus se connecter (ni par Google ni par email)
+
+✅ **Modifier les rôles** :
+   - Changez le rôle d'un utilisateur connecté via Google
+   - Effet immédiat à la prochaine connexion
 
 ### 2. Centre de Validation (`/admin/validations`)
 ✅ **Valider les actions en temps réel** :
@@ -162,27 +177,70 @@ Chaque page et action est limitée selon le rôle :
 
 ---
 
-## 🛠️ Workflow de Validation
+## 🛠️ Configuration Google OAuth
 
-### Exemple concret : Création d'un Produit
+### Étapes pour Activer Google Sign-In
 
-1. **Assistant** crée un produit dans `/inventory`
-2. Le système enregistre une `PendingAction` dans la base
-3. **Admin** reçoit une notification automatique
-4. **Admin** va dans `/admin/validations`
-5. **Admin** voit les détails JSON complets du produit
-6. **Admin** approuve → Le produit est créé en base
-7. **Assistant** reçoit une notification : "Votre action a été approuvée"
+1. **Allez sur Google Cloud Console** : https://console.cloud.google.com/
 
-### Même Workflow Pour :
-- Ajustement stock
-- Création de lots
-- Commandes importantes
-- Modifications de prix
+2. **Créez un nouveau projet** ou sélectionnez un projet existant
+
+3. **Activez l'API Google+ (People API)** :
+   - Menu → APIs & Services → Library
+   - Recherchez "Google+ API"
+   - Cliquez "Enable"
+
+4. **Créez des credentials OAuth 2.0** :
+   - Menu → APIs & Services → Credentials
+   - Click "Create Credentials" → "OAuth client ID"
+   - Type: Web application
+   - Nom: PharmaOS
+
+5. **Configurez les URIs autorisés** :
+   - **JavaScript origins** :
+     - `http://localhost:3000`
+     - `https://pharmacy-management-system-gzlq3dmq8.vercel.app`
+   
+   - **Redirect URIs** :
+     - `http://localhost:3000/api/auth/callback/google`
+     - `https://pharmacy-management-system-gzlq3dmq8.vercel.app/api/auth/callback/google`
+
+6. **Copiez les credentials** :
+   - Client ID : `xxxxx.apps.googleusercontent.com`
+   - Client Secret : `xxxxxx-xxxxxxxx`
+
+7. **Mettez à jour les variables d'environnement** :
+   - Fichier `.env.local` (développement local)
+   - Dashboard Vercel → Settings → Environment Variables (production)
+   
+   ```
+   GOOGLE_CLIENT_ID=votre_client_id_ici
+   GOOGLE_CLIENT_SECRET=votre_client_secret_ici
+   ```
+
+8. **Redéployez l'application** :
+   ```bash
+   npm run build
+   git add .
+   git commit -m "Add Google OAuth credentials"
+   git push origin master
+   ```
+
+**⚠️ IMPORTANT** : Sans ces credentials, le bouton Google affichera une erreur. Configurez-les pour activer la connexion Google.
 
 ---
 
 ## 🗂️ Base de Données
+
+### Réinitialisation avec le Nouvel Admin
+
+**IMPORTANT** : Vous devez exécuter le nouveau `seed-data.sql` dans Supabase pour créer le compte admin `amperella@gmail.com`.
+
+1. Allez sur https://supabase.com/dashboard
+2. Sélectionnez votre projet
+3. SQL Editor
+4. Exécutez **d'abord** `database-reset.sql` (si pas déjà fait)
+5. Exécutez **ensuite** le nouveau `seed-data.sql`
 
 ### Tables Principales
 - **Store** : Pharmacies
@@ -197,26 +255,40 @@ Chaque page et action est limitée selon le rôle :
 
 ### Données de Test
 - 2 Pharmacies
-- 4 Utilisateurs (1 admin, 1 pharmacien, 1 assistant, 1 livreur)
+- **1 Admin** : `amperella@gmail.com` / `admin123`
 - 14 Produits pharmaceutiques réalistes
 - Stock initial avec alertes critiques
 - 3 Tâches de démonstration
 
 ---
 
-## 📊 Prochaines Étapes (Si demandées)
+## 📊 Workflow Typique
 
-### Améliorations Potentielles
-1. **Impression Étiquettes** : Intégration réelle d'imprimante thermique
-2. **Appels VoIP Réels** : Integration Twilio ou service similaire
-3. **Stockage Cloud** : Vercel Blob pour pièces jointes
-4. **Rapports Avancés** : Graphiques avec Recharts
-5. **Module de Prescriptions** : OCR pour scanner ordonnances
-6. **Gestion Patients** : Historique médical complet
+### Exemple : Premier Utilisateur via Google
+
+1. **Utilisateur** clique sur "Se connecter avec Google" sur `/login`
+2. Google OAuth s'ouvre → Sélectionne son compte
+3. **PharmaOS** crée automatiquement un compte avec :
+   - Email: `utilisateur@gmail.com`
+   - Nom: "Utilisateur Google"
+   - Rôle: ASSISTANT
+   - Pharmacie: store_001
+   - Actif: Oui
+4. **Utilisateur** accède au dashboard en mode ASSISTANT (limité)
+5. **Admin** (`amperella@gmail.com`) se connecte → `/admin/users`
+6. **Admin** voit le nouvel utilisateur → Change son rôle en PHARMACIST
+7. **Utilisateur** se déconnecte et reconnecte → A maintenant les permissions PHARMACIST
 
 ---
 
 ## 🚨 Points d'Attention
+
+### Configuration Google OAuth Requise
+Le bouton "Se connecter avec Google" **ne fonctionnera PAS** tant que vous n'aurez pas :
+1. Créé un projet OAuth sur Google Cloud Console
+2. Récupéré les Client ID et Secret
+3. Mis à jour les variables d'environnement
+4. Redéployé l'application
 
 ### Messages "Pending" (⏳)
 Si un utilisateur **non-admin** voit "⏳ Action envoyée pour validation", c'est **NORMAL**.
@@ -224,30 +296,24 @@ L'action n'est pas encore exécutée. Elle attend dans `/admin/validations`.
 
 ### Connexion Requise
 **Impossible d'accéder à l'application sans être connecté**. C'est une sécurité volontaire.
-Utilisez les identifiants ci-dessus pour vous connecter.
-
-### Synchronisation
-Après chaque action, les données sont rechargées automatiquement.
-Si vous ne voyez pas vos changements, rafraîchissez la page (F5).
 
 ---
 
-## 🎯 Checklist Complète des Bugs Corrigés
+## ✅ Checklist Complète
 
-✅ Messagerie fonctionne (envoi + affichage)
-✅ Filtres actifs (catégorie + recherche)
-✅ Scanner ordonnance opérationnel (simulation IA)
-✅ Bouton "Nouveau Produit" avec menu déroulant catégories
-✅ Génération auto code-barres EAN-13
-✅ Sélection produit dans Dispensing (auto-complétion)
-✅ Impression étiquette (message informatif)
-✅ Appels IP messagerie (modal premium + simulation)
-✅ Navigation calendrier (flèches mois)
-✅ Ajout événements calendrier (modal fonctionnel)
-✅ Sécurité totale (middleware authentification)
-✅ Gestion utilisateurs admin (création, mot de passe, activation)
-✅ Centre validation admin (approuver/refuser actions)
-✅ Notifications temps réel bidirectionnelles
+✅ Un seul admin : `amperella@gmail.com` / `admin123`  
+✅ Google OAuth configuré et bouton actif  
+✅ Création automatique comptes Google  
+✅ Messagerie fonctionne 100%  
+✅ Filtres actifs (catégorie + recherche)  
+✅ Scanner ordonnance (simulation IA)  
+✅ Menu déroulant catégories produits  
+✅ Génération auto code-barres  
+✅ Navigation calendrier  
+✅ **SÉCURITÉ TOTALE**  
+✅ **GESTION UTILISATEURS ADMIN**  
+✅ **CENTRE VALIDATION ADMIN**  
+✅ **NOTIFICATIONS TEMPS RÉEL**  
 
 ---
 
