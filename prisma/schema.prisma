@@ -9,304 +9,139 @@ datasource db {
 
 enum UserRole {
   ADMIN
-  STAFF
-  RETAILER
-  WHOLESALE
+  PHARMACIST
+  ASSISTANT
+  DELIVERY
+  WHOLESALE_BUYER
 }
 
-enum OrderStatus {
-  PENDING
-  PROCESSING
-  SHIPPED
-  DELIVERED
-  CANCELLED
-}
-
-enum PrescriptionStatus {
-  PENDING
-  READY
-  DISPENSED
-  CANCELLED
+model Store {
+  id        String   @id @default(cuid())
+  name      String
+  address   String
+  phone     String?
+  users     User[]
+  products  Product[]
+  orders    Order[]
+  inventory Inventory[]
+  createdAt DateTime @default(now())
 }
 
 model User {
   id            String    @id @default(cuid())
+  name          String?
   email         String    @unique
   password      String
-  name          String
-  role          UserRole  @default(STAFF)
+  role          UserRole  @default(ASSISTANT)
   storeId       String?
   store         Store?    @relation(fields: [storeId], references: [id])
+  messagesSent  Message[] @relation("SentMessages")
+  messagesRecv  Message[] @relation("ReceivedMessages")
   createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  orders        Order[]
-  prescriptions Prescription[]
-  activities    Activity[]
-  
-  @@index([email])
-  @@index([storeId])
-}
-
-model Store {
-  id              String    @id @default(cuid())
-  name            String
-  address         String
-  phone           String
-  email           String?
-  isActive        Boolean   @default(true)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  users           User[]
-  products        StoreInventory[]
-  orders          Order[]
-  prescriptions   Prescription[]
-  transfers       StockTransfer[] @relation("FromStore")
-  receivedTransfers StockTransfer[] @relation("ToStore")
-  
-  @@index([isActive])
 }
 
 model Product {
-  id              String    @id @default(cuid())
-  name            String
-  description     String?
-  barcode         String?   @unique
-  sku             String    @unique
-  category        String
-  manufacturer    String?
-  requiresPrescription Boolean @default(false)
-  wholesalePrice  Float
-  retailPrice     Float
-  discountPercent Float     @default(0)
-  taxPercent      Float     @default(0)
-  expiryAlertDays Int       @default(90)
-  reorderLevel    Int       @default(10)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  inventory       StoreInventory[]
-  orderItems      OrderItem[]
-  prescriptionItems PrescriptionItem[]
-  
-  @@index([barcode])
-  @@index([sku])
-  @@index([category])
+  id          String         @id @default(cuid())
+  name        String
+  molecule    String?
+  category    String
+  description String?
+  price       Float          // Retail Price
+  wholesalePrice Float       // Base Wholesale Price
+  barcode     String         @unique
+  rxRequired  Boolean        @default(false)
+  storeId     String
+  store       Store          @relation(fields: [storeId], references: [id])
+  batches     ProductBatch[]
+  inventory   Inventory[]
+  orderItems  OrderItem[]
 }
 
-model StoreInventory {
-  id              String    @id @default(cuid())
-  storeId         String
-  productId       String
-  batchNumber     String?
-  quantity        Int       @default(0)
-  expiryDate      DateTime?
-  location        String?
-  lastCountDate   DateTime?
-  lastCountQty    Int?
-  store           Store     @relation(fields: [storeId], references: [id])
-  product         Product   @relation(fields: [productId], references: [id])
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  
-  @@unique([storeId, productId, batchNumber])
-  @@index([storeId])
-  @@index([productId])
-  @@index([expiryDate])
+model ProductBatch {
+  id          String   @id @default(cuid())
+  batchNumber String
+  expiryDate  DateTime
+  quantity    Int
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id])
+  createdAt   DateTime @default(now())
 }
 
-model StockTransfer {
-  id              String    @id @default(cuid())
-  fromStoreId     String
-  toStoreId       String
-  productId       String
-  quantity        Int
-  status          String    @default("PENDING")
-  notes           String?
-  requestedBy     String?
-  approvedBy      String?
-  fromStore       Store     @relation("FromStore", fields: [fromStoreId], references: [id])
-  toStore         Store     @relation("ToStore", fields: [toStoreId], references: [id])
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  
-  @@index([fromStoreId])
-  @@index([toStoreId])
-  @@index([status])
+model Inventory {
+  id        String  @id @default(cuid())
+  productId String
+  storeId   String
+  quantity  Int     @default(0)
+  minStock  Int     @default(10)
+  shelf     String? // Location in pharmacy
+  product   Product @relation(fields: [productId], references: [id])
+  store     Store   @relation(fields: [storeId], references: [id])
+
+  @@unique([productId, storeId])
+}
+
+model Patient {
+  id            String   @id @default(cuid())
+  name          String
+  email         String?
+  phone         String?
+  loyaltyPoints Int      @default(0)
+  insuranceId   String?
+  insuranceNum  String?
+  orders        Order[]
+  claims        InsuranceClaim[]
 }
 
 model Order {
-  id              String      @id @default(cuid())
-  orderNumber     String      @unique
-  storeId         String
-  customerId      String?
-  userId          String
-  type            String      // RETAIL, WHOLESALE
-  status          OrderStatus @default(PENDING)
-  subtotal        Float
-  tax             Float
-  discount        Float       @default(0)
-  total           Float
-  paymentMethod   String?
-  paymentStatus   String      @default("PENDING")
-  notes           String?
-  store           Store       @relation(fields: [storeId], references: [id])
-  user            User        @relation(fields: [userId], references: [id])
-  customer        Customer?   @relation(fields: [customerId], references: [id])
-  items           OrderItem[]
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
-  
-  @@index([orderNumber])
-  @@index([storeId])
-  @@index([customerId])
-  @@index([status])
-  @@index([createdAt])
+  id          String      @id @default(cuid())
+  orderNumber String      @unique
+  total       Float
+  status      String      @default("PENDING") // PENDING, COMPLETED, CANCELLED
+  type        String      @default("RETAIL")  // RETAIL or WHOLESALE
+  storeId     String
+  store       Store       @relation(fields: [storeId], references: [id])
+  patientId   String?
+  patient     Patient?    @relation(fields: [patientId], references: [id])
+  items       OrderItem[]
+  createdAt   DateTime    @default(now())
 }
 
 model OrderItem {
-  id              String    @id @default(cuid())
-  orderId         String
-  productId       String
-  quantity        Int
-  unitPrice       Float
-  discount        Float     @default(0)
-  tax             Float     @default(0)
-  total           Float
-  order           Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product         Product   @relation(fields: [productId], references: [id])
-  createdAt       DateTime  @default(now())
-  
-  @@index([orderId])
-  @@index([productId])
-}
-
-model Customer {
-  id              String    @id @default(cuid())
-  name            String
-  email           String?
-  phone           String
-  address         String?
-  dateOfBirth     DateTime?
-  insuranceInfo   Json?
-  loyaltyPoints   Int       @default(0)
-  type            String    @default("RETAIL") // RETAIL, WHOLESALE
-  taxId           String?
-  discountPercent Float     @default(0)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  orders          Order[]
-  prescriptions   Prescription[]
-  
-  @@index([phone])
-  @@index([email])
-  @@index([type])
-}
-
-model Prescription {
-  id              String              @id @default(cuid())
-  prescriptionNumber String           @unique
-  customerId      String
-  doctorName      String
-  storeId         String
-  userId          String?
-  status          PrescriptionStatus  @default(PENDING)
-  notes           String?
-  customer        Customer            @relation(fields: [customerId], references: [id])
-  store           Store               @relation(fields: [storeId], references: [id])
-  user            User?               @relation(fields: [userId], references: [id])
-  items           PrescriptionItem[]
-  createdAt       DateTime            @default(now())
-  dispensedAt     DateTime?
-  updatedAt       DateTime            @updatedAt
-  
-  @@index([prescriptionNumber])
-  @@index([customerId])
-  @@index([storeId])
-  @@index([status])
-}
-
-model PrescriptionItem {
-  id              String        @id @default(cuid())
-  prescriptionId  String
-  productId       String
-  quantity        Int
-  dosage          String?
-  frequency       String?
-  duration        String?
-  notes           String?
-  prescription    Prescription  @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
-  product         Product       @relation(fields: [productId], references: [id])
-  createdAt       DateTime      @default(now())
-  
-  @@index([prescriptionId])
-  @@index([productId])
-}
-
-model MedicalInfo {
-  id              String    @id @default(cuid())
-  productId       String?
-  genericName     String
-  brandName       String?
-  category        String
-  indications     String?
-  dosage          String?
-  sideEffects     String?
-  contraindications String?
-  interactions    String?
-  precautions     String?
-  storageInfo     String?
-  manufacturerInfo String?
-  fdaWarnings     String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  
-  @@index([genericName])
-  @@index([category])
+  id        String  @id @default(cuid())
+  orderId   String
+  productId String
+  quantity  Int
+  price     Float
+  order     Order   @relation(fields: [orderId], references: [id])
+  product   Product @relation(fields: [productId], references: [id])
 }
 
 model InsuranceClaim {
-  id              String    @id @default(cuid())
-  claimNumber     String    @unique
-  customerId      String
-  policyNumber    String
-  providerName    String
-  claimAmount     Float
-  approvedAmount  Float?
-  status          String    @default("PENDING")
-  submittedDate   DateTime  @default(now())
-  processedDate   DateTime?
-  notes           String?
-  documents       Json?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  
-  @@index([claimNumber])
-  @@index([customerId])
-  @@index([status])
+  id          String   @id @default(cuid())
+  patientId   String
+  patient     Patient  @relation(fields: [patientId], references: [id])
+  orderId     String
+  status      String   @default("SUBMITTED") // SUBMITTED, APPROVED, DENIED
+  amount      Float
+  createdAt   DateTime @default(now())
 }
 
-model Activity {
-  id              String    @id @default(cuid())
-  userId          String
-  action          String
-  entity          String?
-  entityId        String?
-  details         Json?
-  ipAddress       String?
-  user            User      @relation(fields: [userId], references: [id])
-  createdAt       DateTime  @default(now())
-  
-  @@index([userId])
-  @@index([action])
-  @@index([createdAt])
+model Message {
+  id         String   @id @default(cuid())
+  content    String
+  senderId   String
+  receiverId String
+  sender     User     @relation("SentMessages", fields: [senderId], references: [id])
+  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  createdAt  DateTime @default(now())
 }
 
-model Settings {
-  id              String    @id @default(cuid())
-  key             String    @unique
-  value           Json
-  description     String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  
-  @@index([key])
+model Task {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  dueDate     DateTime
+  status      String   @default("TODO")
+  storeId     String
+  // Add relation if needed
 }
