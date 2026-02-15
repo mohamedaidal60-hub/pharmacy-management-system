@@ -13,7 +13,7 @@ const PharmacyContext = createContext<PharmacyContextType | undefined>(undefined
 export function PharmacyProvider({ children }: { children: ReactNode }) {
     const { data: session } = useSession();
     const [selectedStoreId, setSelectedStoreId] = useState<string | null>(
-        session?.user?.storeId || null
+        session?.user?.storeId || "store_001" // Default store for no-auth
     );
 
     return (

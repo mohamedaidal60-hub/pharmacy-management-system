@@ -35,9 +35,10 @@ export default function Dashboard() {
   const { data: session, status } = useSession();
   const { selectedStoreId } = usePharmacy();
 
-  if (status === "unauthenticated") {
-    redirect("/login");
-  }
+  // Auth désactivée temporairement
+  // if (status === "unauthenticated") {
+  //   redirect("/login");
+  // }
 
   if (!selectedStoreId) {
     return (

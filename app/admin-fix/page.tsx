@@ -5,6 +5,7 @@ import { ShieldCheck, Database, RefreshCw, LogIn } from "lucide-react";
 import Link from "next/link";
 
 export default function AdminFixPage() {
+    // Version 1.1 - Force Update
     const [status, setStatus] = useState<any>(null);
     const [loading, setLoading] = useState(false);
 
