@@ -86,11 +86,11 @@ export default function InventoryPage() {
         if (!selectedStoreId) return alert("Sélectionnez une boutique");
         const res = await updateStock(productId, selectedStoreId, change, "Ajustement manuel");
         if (res.success) {
-            if (res.pending) {
-                alert("⏳ Modification envoyée pour validation admin");
-            }
+            // Success direct
+            alert("✅ Modification effectuée !");
             refreshData();
         } else {
+
             alert("Erreur: " + res.error);
         }
     };
@@ -108,11 +108,7 @@ export default function InventoryPage() {
         );
 
         if (res.success) {
-            if (res.pending) {
-                alert("⏳ Lot envoyé pour validation admin");
-            } else {
-                alert("✅ Lot ajouté !");
-            }
+            alert("✅ Lot ajouté !");
             setShowBatchModal(false);
             setSelectedProduct(null);
             refreshData();
@@ -137,14 +133,11 @@ export default function InventoryPage() {
         });
 
         if (res.success) {
-            if (res.pending) {
-                alert("⏳ Produit envoyé pour validation admin");
-            } else {
-                alert("✅ Produit créé !");
-            }
+            alert("✅ Produit créé !");
             setShowProductModal(false);
             refreshData();
         } else {
+
             alert("❌ " + res.error);
         }
     };
